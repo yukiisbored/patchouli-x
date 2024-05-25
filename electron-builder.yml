@@ -1,5 +1,5 @@
-appId: com.electron.app
-productName: patchouli-x
+appId: app.patchouli.patchouli-x
+productName: Patchouli
 directories:
   buildResources: build
 files:
@@ -20,20 +20,14 @@ nsis:
   createDesktopShortcut: always
 mac:
   entitlementsInherit: build/entitlements.mac.plist
-  extendInfo:
-    - NSCameraUsageDescription: Application requests access to the device's camera.
-    - NSMicrophoneUsageDescription: Application requests access to the device's microphone.
-    - NSDocumentsFolderUsageDescription: Application requests access to the user's Documents folder.
-    - NSDownloadsFolderUsageDescription: Application requests access to the user's Downloads folder.
+  extendInfo: []
   notarize: false
 dmg:
   artifactName: ${name}-${version}.${ext}
 linux:
   target:
     - AppImage
-    - snap
-    - deb
-  maintainer: electronjs.org
+  maintainer: patchouli.app
   category: Utility
 appImage:
   artifactName: ${name}-${version}.${ext}
