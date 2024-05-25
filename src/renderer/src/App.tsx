@@ -1,8 +1,19 @@
 import { ipcLink } from 'electron-trpc/renderer'
 import { useState } from 'react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { trpc } from './trpc'
-import Hello from './Hello'
+import { RouterProvider, createRouter, createHashHistory } from '@tanstack/react-router'
+import { trpc } from '@/trpc'
+
+import { routeTree } from '@/routeTree.gen'
+
+const history = createHashHistory()
+const router = createRouter({ routeTree, history })
+
+declare module '@tanstack/react-router' {
+  interface Register {
+    router: typeof router
+  }
+}
 
 export default function App(): JSX.Element {
   const [queryClient] = useState(() => new QueryClient())
@@ -15,7 +26,7 @@ export default function App(): JSX.Element {
   return (
     <trpc.Provider client={trpcClient} queryClient={queryClient}>
       <QueryClientProvider client={queryClient}>
-        <Hello />
+        <RouterProvider router={router} />
       </QueryClientProvider>
     </trpc.Provider>
   )

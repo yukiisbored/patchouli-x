@@ -1,6 +1,11 @@
-import { trpc } from './trpc'
+import { createFileRoute } from '@tanstack/react-router'
+import { trpc } from '@/trpc'
 
-export default function Hello(): JSX.Element {
+export const Route = createFileRoute('/')({
+  component: Index
+})
+
+function Index(): JSX.Element {
   const { data, error, status } = trpc.greeting.useQuery({ name: 'world' })
 
   trpc.subscription.useSubscription(undefined, {
