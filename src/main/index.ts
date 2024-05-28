@@ -4,6 +4,7 @@ import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import { createIPCHandler } from 'electron-trpc/main'
 import icon from '../../resources/icon.png?asset'
 import { router } from './api'
+import { migrate } from './db'
 
 function createWindow(): void {
   const mainWindow = new BrowserWindow({
@@ -38,13 +39,15 @@ function createWindow(): void {
   }
 }
 
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
   electronApp.setAppUserModelId('app.patchouli.patchouli-x')
 
   app.on('browser-window-created', (_, window) => {
     // Open DevTools with F12 and Ignore Ctrl+R on production
     optimizer.watchWindowShortcuts(window)
   })
+
+  await migrate()
 
   createWindow()
 
