@@ -5,24 +5,36 @@ import EventEmitter from 'events'
 import z from 'zod'
 
 import { scrape } from './scraper'
-import { fetchDocuments, insertDocumentFromScrape } from './db'
+import { DB } from './db'
 
 const ee = new EventEmitter()
 
-const t = initTRPC.create({ isServer: true })
+const t = initTRPC.context<{ db: DB }>().create({ isServer: true })
 
 export const router = t.router({
   documents: t.router({
-    byPage: t.procedure.input(z.object({ page: z.number(), pageSize: z.number() })).query((req) => {
-      const {
-        input: { page, pageSize }
-      } = req
+    byPage: t.procedure
+      .input(z.object({ term: z.string().optional(), page: z.number(), pageSize: z.number() }))
+      .query(async (req) => {
+        const {
+          input: { term, page, pageSize },
+          ctx: {
+            db: { fetchDocuments, searchDocuments }
+          }
+        } = req
 
-      return fetchDocuments(page, pageSize)
-    }),
+        if (term) {
+          const res = await searchDocuments(term, page, pageSize)
+          return res.hits.map((i) => i.document)
+        }
+        return await fetchDocuments(page, pageSize)
+      }),
     fromUrl: t.procedure.input(z.object({ url: z.string().url() })).mutation(async (req) => {
       const {
-        input: { url }
+        input: { url },
+        ctx: {
+          db: { insertDocumentFromScrape }
+        }
       } = req
 
       const res = await scrape(url)
