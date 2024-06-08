@@ -1,7 +1,18 @@
-import { Box, BoxProps, Flex, useColorModeValue, Icon, FlexProps, Link } from '@chakra-ui/react'
-import { IconFiles, IconHelp } from '@tabler/icons-react'
+import {
+  Box,
+  BoxProps,
+  Flex,
+  useColorModeValue,
+  Icon,
+  FlexProps,
+  Link,
+  Button,
+  useDisclosure
+} from '@chakra-ui/react'
+import { IconFiles, IconHelp, IconPlus } from '@tabler/icons-react'
 import { ElementType } from 'react'
 import { Link as RouterLink, useLocation } from '@tanstack/react-router'
+import ScrapeModal from './ScrapeModal'
 
 interface NavItem {
   name: string
@@ -32,7 +43,7 @@ function NavItem({ icon, name, to, ...rest }: NavItemProps): JSX.Element {
         bg={isActive ? 'brand.400' : undefined}
         color={isActive ? 'white' : undefined}
         _hover={{
-          bg: 'brand.400',
+          bg: isActive ? 'brand.600' : 'brand.400',
           color: 'white'
         }}
         {...rest}
@@ -45,20 +56,32 @@ function NavItem({ icon, name, to, ...rest }: NavItemProps): JSX.Element {
 }
 
 function SidebarContent({ ...rest }: BoxProps): JSX.Element {
+  const { isOpen, onOpen, onClose } = useDisclosure()
   return (
-    <Box
-      bg={useColorModeValue('white', 'gray.900')}
-      borderRight="1px"
-      borderRightColor={useColorModeValue('gray.200', 'gray.700')}
-      w="60"
-      pos="fixed"
-      h="full"
-      {...rest}
-    >
-      {navItems.map((i) => (
-        <NavItem key={i.to} {...i} />
-      ))}
-    </Box>
+    <>
+      <ScrapeModal isOpen={isOpen} onClose={onClose} />
+      <Box
+        bg={useColorModeValue('white', 'gray.900')}
+        borderRight="1px"
+        borderRightColor={useColorModeValue('gray.200', 'gray.700')}
+        w="60"
+        pos="fixed"
+        h="full"
+        {...rest}
+      >
+        <Flex direction="column" justifyContent="space-between" h="100%">
+          <Flex direction="column">
+            {navItems.map((i) => (
+              <NavItem key={i.to} {...i} />
+            ))}
+          </Flex>
+          <Button onClick={onOpen}>
+            <Icon mr="1" fontSize="16" _groupHover={{ color: 'white' }} as={IconPlus} />
+            Add from URL
+          </Button>
+        </Flex>
+      </Box>
+    </>
   )
 }
 

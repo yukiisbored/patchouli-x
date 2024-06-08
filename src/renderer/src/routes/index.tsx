@@ -1,26 +1,48 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { trpc } from '@/trpc'
+import { Card, CardBody, FormControl, Input, VStack } from '@chakra-ui/react'
+import DocumentCard from '@/components/DocumentCard'
+import { useFormik } from 'formik'
 
 export const Route = createFileRoute('/')({
   component: Index
 })
 
 function Index(): JSX.Element {
-  const { data, error, status } = trpc.greeting.useQuery({ name: 'world' })
+  const utils = trpc.useUtils()
+  const {
+    handleSubmit,
+    handleChange,
+    values: { term }
+  } = useFormik({ initialValues: { term: '' }, onSubmit: () => {} })
+  const { data, status } = trpc.documents.byPage.useQuery({ term, page: 1, pageSize: 25 })
 
-  trpc.subscription.useSubscription(undefined, {
-    onData: (data) => {
-      console.log(data)
+  trpc.documents.onAdd.useSubscription(undefined, {
+    onData: () => {
+      utils.documents.invalidate()
     }
   })
 
-  if (error) {
-    return <p>{error.message}</p>
-  }
-
-  if (status !== 'success') {
-    return <p>Loading...</p>
-  }
-
-  return <div>{data && <h1>{data.res}</h1>}</div>
+  return (
+    <VStack align="stretch" maxW={800}>
+      <Card>
+        <CardBody p={0}>
+          <form onSubmit={handleSubmit}>
+            <FormControl>
+              <Input
+                id="term"
+                name="term"
+                onChange={handleChange}
+                value={term}
+                bg="white"
+                size="lg"
+                placeholder="What's on your mind?"
+              />
+            </FormControl>
+          </form>
+        </CardBody>
+      </Card>
+      {status === 'success' && data.map((i) => <DocumentCard key={i.id} {...i} />)}
+    </VStack>
+  )
 }
