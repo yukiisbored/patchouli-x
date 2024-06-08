@@ -1,16 +1,19 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { trpc } from '@/trpc'
+import { VStack } from '@chakra-ui/react'
+import DocumentCard from '@/components/DocumentCard'
 
 export const Route = createFileRoute('/')({
   component: Index
 })
 
 function Index(): JSX.Element {
-  const { data, error, status } = trpc.greeting.useQuery({ name: 'world' })
+  const utils = trpc.useUtils()
+  const { data, error, status } = trpc.documents.byPage.useQuery({ page: 1, pageSize: 25 })
 
-  trpc.subscription.useSubscription(undefined, {
-    onData: (data) => {
-      console.log(data)
+  trpc.documents.onAdd.useSubscription(undefined, {
+    onData: () => {
+      utils.documents.invalidate()
     }
   })
 
@@ -22,5 +25,11 @@ function Index(): JSX.Element {
     return <p>Loading...</p>
   }
 
-  return <div>{data && <h1>{data.res}</h1>}</div>
+  return (
+    <VStack align="stretch" maxW={800}>
+      {data.map((i) => (
+        <DocumentCard key={i.id} {...i} />
+      ))}
+    </VStack>
+  )
 }

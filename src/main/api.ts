@@ -5,42 +5,42 @@ import EventEmitter from 'events'
 import z from 'zod'
 
 import { scrape } from './scraper'
-import { insertDocumentFromScrape } from './db'
+import { fetchDocuments, insertDocumentFromScrape } from './db'
 
 const ee = new EventEmitter()
 
 const t = initTRPC.create({ isServer: true })
 
 export const router = t.router({
-  scrape: t.procedure.input(z.object({ url: z.string().url() })).mutation(async (req) => {
-    const {
-      input: { url }
-    } = req
+  documents: t.router({
+    byPage: t.procedure.input(z.object({ page: z.number(), pageSize: z.number() })).query((req) => {
+      const {
+        input: { page, pageSize }
+      } = req
 
-    const res = await scrape(url)
-    return await insertDocumentFromScrape(res)
-  }),
-  greeting: t.procedure.input(z.object({ name: z.string() })).query((req) => {
-    const {
-      input: { name }
-    } = req
-    ee.emit('greeting', name)
+      return fetchDocuments(page, pageSize)
+    }),
+    fromUrl: t.procedure.input(z.object({ url: z.string().url() })).mutation(async (req) => {
+      const {
+        input: { url }
+      } = req
 
-    return {
-      res: `Hello, ${name}`
-    }
-  }),
-  subscription: t.procedure.subscription(() => {
-    return observable((emit) => {
-      function onGreet(res: string): void {
-        emit.next({ res })
-      }
+      const res = await scrape(url)
+      const doc = await insertDocumentFromScrape(res)
+      ee.emit('document:add', doc)
+    }),
+    onAdd: t.procedure.subscription(() => {
+      return observable((emit) => {
+        function onAdd(res: string): void {
+          emit.next({ res })
+        }
 
-      ee.on('greeting', onGreet)
+        ee.on('document:add', onAdd)
 
-      return (): void => {
-        ee.off('greeting', onGreet)
-      }
+        return (): void => {
+          ee.off('document:add', onAdd)
+        }
+      })
     })
   })
 })

@@ -15,7 +15,7 @@ export default function ScrapeModal({
   onClose,
   ...rest
 }: Omit<ModalProps, 'children'>): JSX.Element {
-  const mutation = trpc.scrape.useMutation()
+  const mutation = trpc.documents.fromUrl.useMutation()
 
   async function onSubmit(url: string): Promise<void> {
     const res = await mutation.mutateAsync({ url })
