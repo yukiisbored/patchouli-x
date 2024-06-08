@@ -1,4 +1,6 @@
-import { createRootRoute, Link, Outlet } from '@tanstack/react-router'
+import AppShell from '@/components/AppShell'
+import { ChakraProvider, extendTheme } from '@chakra-ui/react'
+import { createRootRoute, Outlet } from '@tanstack/react-router'
 import { lazy, Suspense } from 'react'
 
 const TanStackRouterDevtools =
@@ -10,15 +12,44 @@ const TanStackRouterDevtools =
         }))
       )
 
+const theme = extendTheme({
+  colors: {
+    gray: {
+      '50': '#F3F0F4',
+      '100': '#DDD6E1',
+      '200': '#C7BBCD',
+      '300': '#B2A1BA',
+      '400': '#9C87A6',
+      '500': '#866C93',
+      '600': '#6B5676',
+      '700': '#514158',
+      '800': '#362B3B',
+      '900': '#1B161D'
+    },
+    brand: {
+      '50': '#F7E5FF',
+      '100': '#E7B8FF',
+      '200': '#D88AFF',
+      '300': '#C95CFF',
+      '400': '#B92EFF',
+      '500': '#AA00FF',
+      '600': '#8800CC',
+      '700': '#660099',
+      '800': '#440066',
+      '900': '#220033'
+    }
+  }
+})
+
 export const Route = createRootRoute({
   component: () => (
-    <>
-      <Link to="/">Home</Link> <Link to="/about">About</Link>
-      <hr />
-      <Outlet />
+    <ChakraProvider theme={theme}>
+      <AppShell>
+        <Outlet />
+      </AppShell>
       <Suspense>
         <TanStackRouterDevtools />
       </Suspense>
-    </>
+    </ChakraProvider>
   )
 })

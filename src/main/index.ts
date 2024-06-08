@@ -19,6 +19,8 @@ function createWindow(): void {
     }
   })
 
+  mainWindow.setMinimumSize(768, 600)
+
   createIPCHandler({ router, windows: [mainWindow] })
 
   mainWindow.on('ready-to-show', () => {
