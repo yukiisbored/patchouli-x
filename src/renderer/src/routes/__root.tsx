@@ -1,12 +1,6 @@
 import AppShell from '@/components/AppShell'
 import { withBaseStyle } from '@/utils'
-import {
-  ChakraProvider,
-  extendTheme,
-  mergeThemeOverride,
-  withDefaultColorScheme,
-  withDefaultProps
-} from '@chakra-ui/react'
+import { ChakraProvider, extendTheme, withDefaultColorScheme } from '@chakra-ui/react'
 import { createRootRoute, Outlet } from '@tanstack/react-router'
 import { lazy, Suspense } from 'react'
 
