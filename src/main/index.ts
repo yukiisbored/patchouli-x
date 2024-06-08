@@ -4,9 +4,9 @@ import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import { createIPCHandler } from 'electron-trpc/main'
 import icon from '../../resources/icon.png?asset'
 import { router } from './api'
-import { migrate } from './db'
+import { DB, createDB } from './db'
 
-function createWindow(): void {
+function createWindow(db: DB): void {
   const mainWindow = new BrowserWindow({
     width: 900,
     height: 600,
@@ -21,7 +21,7 @@ function createWindow(): void {
 
   mainWindow.setMinimumSize(768, 600)
 
-  createIPCHandler({ router, windows: [mainWindow] })
+  createIPCHandler({ router, windows: [mainWindow], createContext: () => Promise.resolve({ db }) })
 
   mainWindow.on('ready-to-show', () => {
     mainWindow.show()
@@ -49,12 +49,14 @@ app.whenReady().then(async () => {
     optimizer.watchWindowShortcuts(window)
   })
 
-  await migrate()
+  const db = await createDB()
+  await db.migrate()
+  await db.loadIndex()
 
-  createWindow()
+  createWindow(db)
 
   app.on('activate', function () {
-    if (BrowserWindow.getAllWindows().length === 0) createWindow()
+    if (BrowserWindow.getAllWindows().length === 0) createWindow(db)
   })
 })
 
