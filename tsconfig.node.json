@@ -3,6 +3,6 @@
   "include": ["electron.vite.config.*", "src/main/**/*", "src/preload/**/*", "drizzle.config.ts"],
   "compilerOptions": {
     "composite": true,
-    "types": ["electron-vite/node"]
+    "types": ["electron-vite/node"],
   }
 }

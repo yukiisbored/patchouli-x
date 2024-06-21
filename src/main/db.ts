@@ -1,7 +1,6 @@
 /* eslint-disable @typescript-eslint/explicit-function-return-type */
 import Database from 'better-sqlite3'
-import { app } from 'electron'
-import { mkdir as baseMkdir, writeFile as baseWriteFile } from 'fs'
+import { mkdir, writeFile } from 'fs/promises'
 import { join } from 'path'
 import { drizzle } from 'drizzle-orm/better-sqlite3'
 import { migrate as baseMigrate } from 'drizzle-orm/better-sqlite3/migrator'
@@ -9,25 +8,63 @@ import { is } from '@electron-toolkit/utils'
 import { documents } from './schema'
 import { ulid } from 'ulid'
 import { ScrapeResult } from './scraper'
-import { promisify } from 'util'
-import { desc } from 'drizzle-orm'
+import { desc, getTableColumns, notInArray, SQL, sql } from 'drizzle-orm'
 import {
   create as orama,
-  insertMultiple as oramaInsertMultiple,
   insert as oramaInsert,
+  insertMultiple as oramaInsertMultiple,
   search as oramaSearch
 } from '@orama/orama'
+import { privatePath, Settings } from './settings'
+import z from 'zod'
+import { readdir, readFile } from 'node:fs/promises'
+import { SQLiteTable } from 'drizzle-orm/sqlite-core'
+import { Tuple } from './utils'
 
-const mkdir = promisify(baseMkdir)
-const writeFile = promisify(baseWriteFile)
+const zDateTime = z
+  .string()
+  .datetime()
+  .transform((i) => new Date(i))
+
+const metaSchema = z.object({
+  version: z.literal(0),
+  id: z.string().ulid(),
+  url: z.string(),
+  createdAt: zDateTime,
+  updatedAt: zDateTime,
+  favicon: z.string().optional(),
+  title: z.string().optional(),
+  description: z.string().optional(),
+  keywords: z.array(z.string()).default([]),
+  publishedAt: zDateTime.optional(),
+  image: z.string().optional(),
+  content: z.string().optional(),
+  author: z.object({ name: z.string(), url: z.string().optional() }).optional()
+})
+
+const buildConflictUpdateColumns = <T extends SQLiteTable, Q extends keyof T['_']['columns']>(
+  table: T,
+  columns: Q[]
+) => {
+  const cls = getTableColumns(table)
+  return columns.reduce(
+    (acc, column) => {
+      const colName = cls[column].name
+      acc[column] = sql.raw(`excluded.${colName}`)
+      return acc
+    },
+    {} as Record<Q, SQL>
+  )
+}
+
+export type Meta = z.infer<typeof metaSchema>
 
 export type DB = Awaited<ReturnType<typeof createDB>>
 
-export async function createDB() {
-  const dataPath = join(app.getPath('userData'), 'Patchouli Data')
+export async function createDB({ dataPath }: Settings) {
   await mkdir(dataPath, { recursive: true })
 
-  const dbPath = join(dataPath, 'data.sqlite3')
+  const dbPath = join(privatePath, 'data.sqlite3')
   const sqlite = new Database(dbPath)
 
   const migrationsFolder = is.dev
@@ -49,6 +86,80 @@ export async function createDB() {
     baseMigrate(db, {
       migrationsFolder
     })
+  }
+
+  async function scan() {
+    const documentParseJobs = (await readdir(dataPath, { withFileTypes: true }))
+      .filter((i) => i.isDirectory())
+      .filter((i) => z.string().ulid().safeParse(i.name).success)
+      .map(async (i) => {
+        const documentPath = join(dataPath, i.name)
+        const metaPath = join(documentPath, 'meta.json')
+        const metaRaw = await readFile(metaPath, 'utf-8')
+        return metaSchema.parseAsync(JSON.parse(metaRaw))
+      })
+
+    const { l: resolved } = await Promise.allSettled(documentParseJobs).then((res) =>
+      res.reduce(
+        ({ l, r }, i) => {
+          if (i.status === 'fulfilled') {
+            return { l: l.concat(i.value), r }
+          }
+          return { l, r: r.concat(i.reason) }
+        },
+        Tuple<Array<Meta>, Array<unknown>>([], [])
+      )
+    )
+
+    if (resolved.length === 0) {
+      await db.delete(documents)
+      return
+    }
+
+    await db
+      .insert(documents)
+      .values(
+        resolved.map((i) => ({
+          status: 'complete' as const,
+          id: i.id,
+          url: i.url,
+          title: i.title,
+          description: i.description,
+          content: i.content,
+          createdAt: i.createdAt,
+          updatedAt: i.updatedAt,
+          keywords: i.keywords,
+          publishedAt: i.publishedAt,
+          image: i.image,
+          favicon: i.favicon,
+          author: i.author?.name,
+          authorUrl: i.author?.url
+        }))
+      )
+      .onConflictDoUpdate({
+        target: documents.id,
+        set: buildConflictUpdateColumns(documents, [
+          'url',
+          'title',
+          'description',
+          'content',
+          'createdAt',
+          'updatedAt',
+          'keywords',
+          'publishedAt',
+          'image',
+          'favicon',
+          'author',
+          'authorUrl'
+        ])
+      })
+
+    await db.delete(documents).where(
+      notInArray(
+        documents.id,
+        resolved.map((i) => i.id)
+      )
+    )
   }
 
   async function loadIndex(): Promise<void> {
@@ -80,8 +191,9 @@ export async function createDB() {
       offset: (page - 1) * pageSize
     })
   }
+
   async function fetchDocuments(page: number = 1, pageSize: number = 25) {
-    return await db
+    return db
       .select()
       .from(documents)
       .orderBy(desc(documents.createdAt))
@@ -98,7 +210,24 @@ export async function createDB() {
     await mkdir(documentPath)
 
     const htmlPath = join(documentPath, 'index.html')
-    writeFile(htmlPath, htmlContent)
+    await writeFile(htmlPath, htmlContent)
+
+    const metaPath = join(documentPath, 'meta.json')
+    await writeFile(
+      metaPath,
+      JSON.stringify(
+        {
+          ...res,
+          htmlContent: undefined,
+          version: 0,
+          id,
+          createdAt: new Date(),
+          updatedAt: new Date()
+        } as Meta,
+        null,
+        2
+      )
+    )
 
     const [r] = await db
       .insert(documents)
@@ -111,6 +240,7 @@ export async function createDB() {
         content
       })
       .returning()
+
     await oramaInsert(documentIndex, {
       id,
       url,
@@ -123,6 +253,7 @@ export async function createDB() {
 
   return {
     migrate,
+    scan,
     loadIndex,
     fetchDocuments,
     insertDocumentFromScrape,
