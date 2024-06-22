@@ -27,7 +27,7 @@ export default function ScrapeModal({
     <Modal onClose={onClose} {...rest}>
       <ModalOverlay />
       <ModalContent>
-        <ModalBody p="2">
+        <ModalBody p="0">
           <Formik initialValues={{ url: '' }} onSubmit={({ url }) => onSubmit(url)}>
             {({ handleSubmit, handleChange, values, errors }) => (
               <form onSubmit={handleSubmit}>
@@ -39,6 +39,7 @@ export default function ScrapeModal({
                     onChange={handleChange}
                     value={values.url}
                     placeholder="Paste your link here"
+                    size="lg"
                   />
                   {errors.url && <FormErrorMessage>{errors.url}</FormErrorMessage>}
                 </FormControl>
