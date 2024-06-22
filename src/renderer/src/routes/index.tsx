@@ -1,6 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { trpc } from '@/trpc'
 import {
+  Button,
   Card,
   CardBody,
   FormControl,
@@ -14,7 +15,7 @@ import {
 import DocumentCard from '@/components/DocumentCard'
 import { IconPlus } from '@tabler/icons-react'
 import ScrapeModal from '@/components/ScrapeModal'
-import { Suspense, useDeferredValue, useState } from 'react'
+import { Fragment, Suspense, useDeferredValue, useState } from 'react'
 
 export const Route = createFileRoute('/')({
   component: Index
@@ -26,11 +27,18 @@ function Index(): JSX.Element {
   const deferredTerm = useDeferredValue(term)
   const isStale = deferredTerm !== term
 
-  const { data, status } = trpc.documents.byPage.useQuery({
-    term: deferredTerm,
-    page: 1,
-    pageSize: 25
-  })
+  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, status } =
+    trpc.documents.byPage.useInfiniteQuery(
+      {
+        term: deferredTerm,
+        pageSize: 25
+      },
+      {
+        getNextPageParam: (page) => page.nextPage,
+        initialCursor: 1
+      }
+    )
+
   const { isOpen, onOpen, onClose } = useDisclosure()
 
   trpc.documents.onAdd.useSubscription(undefined, {
@@ -63,8 +71,34 @@ function Index(): JSX.Element {
       </Card>
 
       <Suspense fallback={<Spinner />}>
-        <VStack align="stretch" w={800} mx="auto" my={2} px={4} opacity={isStale ? 0.5 : 1}>
-          {status === 'success' && data.map((i) => <DocumentCard key={i.id} {...i} />)}
+        <VStack
+          align="stretch"
+          w={800}
+          mx="auto"
+          my={2}
+          pb="32px"
+          px={4}
+          opacity={isStale ? 0.5 : 1}
+        >
+          {status === 'success' && (
+            <>
+              {data.pages.map((page, i) => (
+                <Fragment key={i}>
+                  {page.items.map((doc) => (
+                    <DocumentCard key={doc.id} {...doc} />
+                  ))}
+                </Fragment>
+              ))}
+
+              <Button onClick={() => fetchNextPage()} disabled={!hasNextPage || isFetchingNextPage}>
+                {isFetchingNextPage
+                  ? 'Loading more...'
+                  : hasNextPage
+                    ? 'Load more'
+                    : 'Nothing more'}
+              </Button>
+            </>
+          )}
         </VStack>
       </Suspense>
 

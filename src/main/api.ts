@@ -14,20 +14,16 @@ const t = initTRPC.context<{ db: DB }>().create({ isServer: true })
 export const router = t.router({
   documents: t.router({
     byPage: t.procedure
-      .input(z.object({ term: z.string().optional(), page: z.number(), pageSize: z.number() }))
+      .input(z.object({ term: z.string().optional(), cursor: z.number(), pageSize: z.number() }))
       .query(async (req) => {
         const {
-          input: { term, page, pageSize },
+          input: { term, cursor: page, pageSize },
           ctx: {
             db: { fetchDocuments, searchDocuments }
           }
         } = req
 
-        if (term) {
-          const res = await searchDocuments(term, page, pageSize)
-          return res.hits.map((i) => i.document)
-        }
-        return await fetchDocuments(page, pageSize)
+        return term ? searchDocuments(term, page, pageSize) : fetchDocuments(page, pageSize)
       }),
     fromUrl: t.procedure.input(z.object({ url: z.string().url() })).mutation(async (req) => {
       const {
