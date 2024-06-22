@@ -1,34 +1,39 @@
-# patchouli-x
+<div align="center">
+  <img src="resources/icon.png" alt="Logo" width="100" height="100">
 
-An Electron application with React and TypeScript
+  <h3 align="center">Patchouli X</h3>
 
-## Recommended IDE Setup
+  <p align="center">
+    Search your darlings ✨
+  </p>
+</div>
 
-- [VSCode](https://code.visualstudio.com/) + [ESLint](https://marketplace.visualstudio.com/items?itemName=dbaeumer.vscode-eslint) + [Prettier](https://marketplace.visualstudio.com/items?itemName=esbenp.prettier-vscode)
+## What is Patchouli?
 
-## Project Setup
+Patchouli aims to be your personal search engine for all the things you know and love.
 
-### Install
+Patchouli is built for people who are born in the post-Google era.
+We search for things, not organize them in complicated hierarchical structures.
 
-```bash
+## Hack Patchouli
+
+```shell-session
 $ npm install
-```
-
-### Development
-
-```bash
 $ npm run dev
 ```
 
-### Build
+## FAQ
 
-```bash
-# For windows
-$ npm run build:win
+This section is from the perspective of the original author, Yuki.
 
-# For macOS
-$ npm run build:mac
+### Why is the project called Patchouli X?
 
-# For Linux
-$ npm run build:linux
-```
+In the beginning, Patchouli was intended to be a subscription-based SaaS product.
+However, after months of development, I felt conflicted about the direction of the project.
+Mainly surrounding user privacy, data ownership, and the unfun part that is running a SaaS business.
+
+So, I decided to start over and build an offline-first and open-source version of Patchouli, which is Patchouli X.
+
+## License
+
+This project is licensed under the ISC License - see the [LICENSE](LICENSE) file for details.
