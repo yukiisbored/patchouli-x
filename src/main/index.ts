@@ -9,6 +9,7 @@ import { loadSettings } from './settings'
 
 function createWindow(db: DB): void {
   const mainWindow = new BrowserWindow({
+    minWidth: 900,
     width: 900,
     height: 600,
     show: false,

@@ -1,5 +1,4 @@
 import AppShell from '@/components/AppShell'
-import { withBaseStyle } from '@/utils'
 import { ChakraProvider, extendTheme, withDefaultColorScheme } from '@chakra-ui/react'
 import { createRootRoute, Outlet } from '@tanstack/react-router'
 import { lazy, Suspense } from 'react'
@@ -45,8 +44,7 @@ const theme = extendTheme(
       useSystemColorMode: true
     }
   },
-  withDefaultColorScheme({ colorScheme: 'brand' }),
-  withBaseStyle({ borderRadius: 'none' })
+  withDefaultColorScheme({ colorScheme: 'brand' })
 )
 
 export const Route = createRootRoute({
@@ -56,7 +54,15 @@ export const Route = createRootRoute({
         <Outlet />
       </AppShell>
       <Suspense>
-        <TanStackRouterDevtools position="bottom-right" />
+        <TanStackRouterDevtools
+          position="bottom-right"
+          toggleButtonProps={{
+            style: {
+              bottom: '36px',
+              right: '2px'
+            }
+          }}
+        />
       </Suspense>
     </ChakraProvider>
   )

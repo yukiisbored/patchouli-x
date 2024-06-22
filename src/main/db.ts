@@ -184,21 +184,36 @@ export async function createDB({ dataPath }: Settings) {
     )
   }
 
-  async function searchDocuments(term: string, page: number = 1, pageSize: number = 25) {
-    return await oramaSearch(documentIndex, {
-      term,
-      limit: pageSize,
-      offset: (page - 1) * pageSize
-    })
-  }
-
   async function fetchDocuments(page: number = 1, pageSize: number = 25) {
-    return db
+    const items = await db
       .select()
       .from(documents)
       .orderBy(desc(documents.createdAt))
       .limit(pageSize)
       .offset((page - 1) * pageSize)
+
+    const nextPage = items.length === pageSize ? page + 1 : undefined
+
+    return {
+      items,
+      nextPage
+    }
+  }
+
+  async function searchDocuments(term: string, page: number = 1, pageSize: number = 25) {
+    const res = await oramaSearch(documentIndex, {
+      term,
+      limit: pageSize,
+      offset: (page - 1) * pageSize
+    })
+
+    const items = res.hits.map((i) => i.document)
+    const nextPage = items.length === pageSize ? pageSize + 1 : undefined
+
+    return {
+      items,
+      nextPage
+    }
   }
 
   async function insertDocumentFromScrape(res: ScrapeResult) {
