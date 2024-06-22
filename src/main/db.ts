@@ -32,14 +32,14 @@ const metaSchema = z.object({
   url: z.string(),
   createdAt: zDateTime,
   updatedAt: zDateTime,
-  favicon: z.string().optional(),
-  title: z.string().optional(),
-  description: z.string().optional(),
-  keywords: z.array(z.string()).default([]),
-  publishedAt: zDateTime.optional(),
-  image: z.string().optional(),
-  content: z.string().optional(),
-  author: z.object({ name: z.string(), url: z.string().optional() }).optional()
+  favicon: z.string().nullish(),
+  title: z.string().nullish(),
+  description: z.string().nullish(),
+  keywords: z.array(z.string()).nullish().default([]),
+  publishedAt: zDateTime.nullish(),
+  image: z.string().nullish(),
+  content: z.string().nullish(),
+  author: z.object({ name: z.string(), url: z.string().nullish() }).nullish()
 })
 
 const buildConflictUpdateColumns = <T extends SQLiteTable, Q extends keyof T['_']['columns']>(
@@ -244,9 +244,9 @@ export async function createDB({ dataPath }: Settings) {
     await oramaInsert(documentIndex, {
       id,
       url,
-      title,
-      description,
-      content
+      title: title ?? undefined,
+      description: description ?? undefined,
+      content: content ?? undefined
     })
     return r
   }
