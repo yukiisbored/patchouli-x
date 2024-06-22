@@ -1,10 +1,11 @@
-import { app, shell, BrowserWindow } from 'electron'
+import { app, BrowserWindow, shell } from 'electron'
 import { join } from 'path'
-import { electronApp, optimizer, is } from '@electron-toolkit/utils'
+import { electronApp, is, optimizer } from '@electron-toolkit/utils'
 import { createIPCHandler } from 'electron-trpc/main'
 import icon from '../../resources/icon.png?asset'
 import { router } from './api'
-import { DB, createDB } from './db'
+import { createDB, DB } from './db'
+import { loadSettings } from './settings'
 
 function createWindow(db: DB): void {
   const mainWindow = new BrowserWindow({
@@ -12,7 +13,7 @@ function createWindow(db: DB): void {
     height: 600,
     show: false,
     autoHideMenuBar: true,
-    ...(process.platform === 'linux' ? { icon } : {}),
+    icon,
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       sandbox: false
@@ -21,7 +22,11 @@ function createWindow(db: DB): void {
 
   mainWindow.setMinimumSize(768, 600)
 
-  createIPCHandler({ router, windows: [mainWindow], createContext: () => Promise.resolve({ db }) })
+  createIPCHandler({
+    router,
+    windows: [mainWindow],
+    createContext: () => Promise.resolve({ db })
+  })
 
   mainWindow.on('ready-to-show', () => {
     mainWindow.show()
@@ -49,8 +54,10 @@ app.whenReady().then(async () => {
     optimizer.watchWindowShortcuts(window)
   })
 
-  const db = await createDB()
+  const settings = await loadSettings()
+  const db = await createDB(settings)
   await db.migrate()
+  await db.scan()
   await db.loadIndex()
 
   createWindow(db)
