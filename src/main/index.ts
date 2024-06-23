@@ -57,9 +57,7 @@ app.whenReady().then(async () => {
 
   const settings = await loadSettings()
   const db = await createDB(settings)
-  await db.migrate()
   await db.scan()
-  await db.loadIndex()
 
   createWindow(db)
 

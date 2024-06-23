@@ -1,25 +1,19 @@
-/* eslint-disable @typescript-eslint/explicit-function-return-type */
-import Database from 'better-sqlite3'
 import { mkdir, writeFile } from 'fs/promises'
 import { join } from 'path'
-import { drizzle } from 'drizzle-orm/better-sqlite3'
-import { migrate as baseMigrate } from 'drizzle-orm/better-sqlite3/migrator'
-import { is } from '@electron-toolkit/utils'
-import { documents } from './schema'
 import { ulid } from 'ulid'
 import { ScrapeResult } from './scraper'
-import { desc, getTableColumns, notInArray, SQL, sql } from 'drizzle-orm'
 import {
   create as orama,
   insert as oramaInsert,
   insertMultiple as oramaInsertMultiple,
   search as oramaSearch
 } from '@orama/orama'
-import { privatePath, Settings } from './settings'
+import { documentsStore as oramaDocumentsStore } from '@orama/orama/components'
+import { Settings } from './settings'
 import z from 'zod'
 import { readdir, readFile } from 'node:fs/promises'
-import { SQLiteTable } from 'drizzle-orm/sqlite-core'
 import { Tuple } from './utils'
+import invariant from 'tiny-invariant'
 
 const zDateTime = z
   .string()
@@ -42,36 +36,20 @@ const metaSchema = z.object({
   author: z.object({ name: z.string(), url: z.string().nullish() }).nullish()
 })
 
-const buildConflictUpdateColumns = <T extends SQLiteTable, Q extends keyof T['_']['columns']>(
-  table: T,
-  columns: Q[]
-) => {
-  const cls = getTableColumns(table)
-  return columns.reduce(
-    (acc, column) => {
-      const colName = cls[column].name
-      acc[column] = sql.raw(`excluded.${colName}`)
-      return acc
-    },
-    {} as Record<Q, SQL>
-  )
-}
-
 export type Meta = z.infer<typeof metaSchema>
 
 export type DB = Awaited<ReturnType<typeof createDB>>
 
+export type Result = {
+  items: Array<Meta>
+  nextPage?: number
+}
+
+// eslint-disable-next-line @typescript-eslint/explicit-function-return-type
 export async function createDB({ dataPath }: Settings) {
   await mkdir(dataPath, { recursive: true })
 
-  const dbPath = join(privatePath, 'data.sqlite3')
-  const sqlite = new Database(dbPath)
-
-  const migrationsFolder = is.dev
-    ? join(__dirname, '../../resources/drizzle')
-    : join(process.resourcesPath, 'app.asar.unpacked', 'resources', 'drizzle')
-
-  const db = drizzle(sqlite)
+  const store = await oramaDocumentsStore.createDocumentsStore()
   const documentIndex = await orama({
     schema: {
       id: 'string',
@@ -79,25 +57,53 @@ export async function createDB({ dataPath }: Settings) {
       description: 'string',
       content: 'string',
       url: 'string'
-    } as const
+    } as const,
+    components: {
+      // HACK(yuki): We're gutting Orama's default document store to be an
+      //             expensive Orama Internal ID -> Canonical ID mapper.
+      //
+      //             Also this breaks Orama's types which is always fun.
+      //
+      //             :-)
+      documentsStore: {
+        ...store,
+        store(ctx, id, { id: docId }) {
+          return store.store(ctx, id, { id: docId })
+        }
+      }
+    }
   })
 
-  async function migrate(): Promise<void> {
-    baseMigrate(db, {
-      migrationsFolder
-    })
-  }
+  // HACK: For now, we'll assume the store is static and can only grow
+  let cachedDocumentsIds: string[] | undefined = undefined
 
-  async function scan() {
-    const documentParseJobs = (await readdir(dataPath, { withFileTypes: true }))
+  async function getDocumentIds(): Promise<string[]> {
+    if (cachedDocumentsIds) return cachedDocumentsIds
+
+    const dir = await readdir(dataPath, { withFileTypes: true })
+
+    const res = dir
       .filter((i) => i.isDirectory())
       .filter((i) => z.string().ulid().safeParse(i.name).success)
-      .map(async (i) => {
-        const documentPath = join(dataPath, i.name)
-        const metaPath = join(documentPath, 'meta.json')
-        const metaRaw = await readFile(metaPath, 'utf-8')
-        return metaSchema.parseAsync(JSON.parse(metaRaw))
-      })
+      .map((i) => i.name)
+      // Our canonical IDs are ULIDs which are lexicographically sortable. This is fine.
+      .toSorted((a, b) => b.localeCompare(a, 'en', { sensitivity: 'base' }))
+
+    cachedDocumentsIds = res
+
+    return res
+  }
+
+  async function getDocument(id: string): Promise<Meta> {
+    const documentPath = join(dataPath, id)
+    const metaPath = join(documentPath, 'meta.json')
+    const metaRaw = await readFile(metaPath, 'utf-8')
+
+    return metaSchema.parseAsync(JSON.parse(metaRaw))
+  }
+
+  async function scan(): Promise<void> {
+    const documentParseJobs = (await getDocumentIds()).map(getDocument)
 
     const { l: resolved } = await Promise.allSettled(documentParseJobs).then((res) =>
       res.reduce(
@@ -112,70 +118,12 @@ export async function createDB({ dataPath }: Settings) {
     )
 
     if (resolved.length === 0) {
-      await db.delete(documents)
       return
     }
 
-    await db
-      .insert(documents)
-      .values(
-        resolved.map((i) => ({
-          status: 'complete' as const,
-          id: i.id,
-          url: i.url,
-          title: i.title,
-          description: i.description,
-          content: i.content,
-          createdAt: i.createdAt,
-          updatedAt: i.updatedAt,
-          keywords: i.keywords,
-          publishedAt: i.publishedAt,
-          image: i.image,
-          favicon: i.favicon,
-          author: i.author?.name,
-          authorUrl: i.author?.url
-        }))
-      )
-      .onConflictDoUpdate({
-        target: documents.id,
-        set: buildConflictUpdateColumns(documents, [
-          'url',
-          'title',
-          'description',
-          'content',
-          'createdAt',
-          'updatedAt',
-          'keywords',
-          'publishedAt',
-          'image',
-          'favicon',
-          'author',
-          'authorUrl'
-        ])
-      })
-
-    await db.delete(documents).where(
-      notInArray(
-        documents.id,
-        resolved.map((i) => i.id)
-      )
-    )
-  }
-
-  async function loadIndex(): Promise<void> {
-    const res = await db
-      .select({
-        id: documents.id,
-        url: documents.url,
-        title: documents.title,
-        description: documents.description,
-        content: documents.content
-      })
-      .from(documents)
-
     await oramaInsertMultiple(
       documentIndex,
-      res.map((i) => ({
+      resolved.map((i) => ({
         ...i,
         title: i.title ?? '',
         description: i.description ?? '',
@@ -184,13 +132,10 @@ export async function createDB({ dataPath }: Settings) {
     )
   }
 
-  async function fetchDocuments(page: number = 1, pageSize: number = 25) {
-    const items = await db
-      .select()
-      .from(documents)
-      .orderBy(desc(documents.createdAt))
-      .limit(pageSize)
-      .offset((page - 1) * pageSize)
+  async function fetchDocuments(page: number = 1, pageSize: number = 25): Promise<Result> {
+    const start = (page - 1) * pageSize
+    const end = start + pageSize
+    const items = await Promise.all((await getDocumentIds()).slice(start, end).map(getDocument))
 
     const nextPage = items.length === pageSize ? page + 1 : undefined
 
@@ -200,15 +145,20 @@ export async function createDB({ dataPath }: Settings) {
     }
   }
 
-  async function searchDocuments(term: string, page: number = 1, pageSize: number = 25) {
+  async function searchDocuments(
+    term: string,
+    page: number = 1,
+    pageSize: number = 25
+  ): Promise<Result> {
     const res = await oramaSearch(documentIndex, {
       term,
       limit: pageSize,
       offset: (page - 1) * pageSize
     })
 
-    const items = res.hits.map((i) => i.document)
-    const nextPage = items.length === pageSize ? pageSize + 1 : undefined
+    const ids = res.hits.map((i) => i.document.id)
+    const nextPage = ids.length === pageSize ? pageSize + 1 : undefined
+    const items = await Promise.all(ids.map(getDocument))
 
     return {
       items,
@@ -216,7 +166,7 @@ export async function createDB({ dataPath }: Settings) {
     }
   }
 
-  async function insertDocumentFromScrape(res: ScrapeResult) {
+  async function insertDocumentFromScrape(res: ScrapeResult): Promise<Meta> {
     const id = ulid()
 
     const { title, description, content, url, htmlContent } = res
@@ -228,33 +178,19 @@ export async function createDB({ dataPath }: Settings) {
     await writeFile(htmlPath, htmlContent)
 
     const metaPath = join(documentPath, 'meta.json')
-    await writeFile(
-      metaPath,
-      JSON.stringify(
-        {
-          ...res,
-          htmlContent: undefined,
-          version: 0,
-          id,
-          createdAt: new Date(),
-          updatedAt: new Date()
-        } as Meta,
-        null,
-        2
-      )
-    )
+    const meta = {
+      ...res,
+      htmlContent: undefined,
+      version: 0,
+      id,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    } as Meta
 
-    const [r] = await db
-      .insert(documents)
-      .values({
-        id,
-        status: 'complete',
-        url,
-        title,
-        description,
-        content
-      })
-      .returning()
+    await writeFile(metaPath, JSON.stringify(meta, null, 2))
+
+    invariant(cachedDocumentsIds, 'Cached Document IDs should be initialized by now')
+    cachedDocumentsIds = [id, ...cachedDocumentsIds]
 
     await oramaInsert(documentIndex, {
       id,
@@ -263,13 +199,12 @@ export async function createDB({ dataPath }: Settings) {
       description: description ?? undefined,
       content: content ?? undefined
     })
-    return r
+
+    return meta
   }
 
   return {
-    migrate,
     scan,
-    loadIndex,
     fetchDocuments,
     insertDocumentFromScrape,
     searchDocuments
