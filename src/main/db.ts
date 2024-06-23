@@ -8,13 +8,14 @@ import { is } from '@electron-toolkit/utils'
 import { documents } from './schema'
 import { ulid } from 'ulid'
 import { ScrapeResult } from './scraper'
-import { desc, getTableColumns, notInArray, SQL, sql } from 'drizzle-orm'
+import { desc, eq, getTableColumns, notInArray, SQL, sql } from 'drizzle-orm'
 import {
   create as orama,
   insert as oramaInsert,
   insertMultiple as oramaInsertMultiple,
   search as oramaSearch
 } from '@orama/orama'
+import { documentsStore as oramaDocumentsStore } from '@orama/orama/components'
 import { privatePath, Settings } from './settings'
 import z from 'zod'
 import { readdir, readFile } from 'node:fs/promises'
@@ -71,7 +72,28 @@ export async function createDB({ dataPath }: Settings) {
     ? join(__dirname, '../../resources/drizzle')
     : join(process.resourcesPath, 'app.asar.unpacked', 'resources', 'drizzle')
 
+  // HACK(yuki):
+  //     I'm not happy with using two databases that serve rather redundant
+  //     purposes.
+  //
+  //     This is done this way because this is how the original Patchouli
+  //     worked, but a lot of the dirty work was done by Laravel Scout.
+  //
+  //     But as X uses plain old hierarchial filesystems[^1] as the database since
+  //     7e0b69a43, I think we should eliminate SQLite.
+  //
+  //     I did make a first-attempt which failed miserably because I followed
+  //     the "Remote Document Storing"[rds] example from Orama too closely and
+  //     encountered problem with mapping between Orama's internal IDs and our
+  //     canonical IDs.
+  //
+  //     [^1]: Quite ironic when you think about it.
+  //           Also, I don't think Uriel would be happy since I'm doing this in
+  //           Node.js/Electron :s
+  //
+  //     [rds]: https://docs.askorama.ai/open-source/usage/insert#remote-document-storing
   const db = drizzle(sqlite)
+  const store = await oramaDocumentsStore.createDocumentsStore()
   const documentIndex = await orama({
     schema: {
       id: 'string',
@@ -79,7 +101,21 @@ export async function createDB({ dataPath }: Settings) {
       description: 'string',
       content: 'string',
       url: 'string'
-    } as const
+    } as const,
+    components: {
+      // HACK(yuki): We're gutting Orama's default document store to be an
+      //             expensive Orama Internal ID -> Canonical ID mapper.
+      //
+      //             Also this breaks Orama's types which is always fun.
+      //
+      //             :-)
+      documentsStore: {
+        ...store,
+        store(ctx, id, { id: docId }) {
+          return store.store(ctx, id, { id: docId })
+        }
+      }
+    }
   })
 
   async function migrate(): Promise<void> {
@@ -207,8 +243,20 @@ export async function createDB({ dataPath }: Settings) {
       offset: (page - 1) * pageSize
     })
 
-    const items = res.hits.map((i) => i.document)
-    const nextPage = items.length === pageSize ? pageSize + 1 : undefined
+    const ids = res.hits.map((i) => i.document.id)
+    const nextPage = ids.length === pageSize ? pageSize + 1 : undefined
+
+    // HACK(yuki): This makes me a bit unhappy.
+    //             I try to not think about it.
+    const items = await Promise.all(
+      ids.map((i) =>
+        db
+          .select()
+          .from(documents)
+          .where(eq(documents.id, i))
+          .then((i) => i[0])
+      )
+    )
 
     return {
       items,
