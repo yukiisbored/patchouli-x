@@ -55,6 +55,7 @@ export async function createDB({ dataPath }: Settings) {
       id: 'string',
       title: 'string',
       description: 'string',
+      keywords: 'string[]',
       content: 'string',
       url: 'string'
     } as const,
@@ -125,9 +126,10 @@ export async function createDB({ dataPath }: Settings) {
       documentIndex,
       resolved.map((i) => ({
         ...i,
-        title: i.title ?? '',
-        description: i.description ?? '',
-        content: i.content ?? ''
+        title: i.title ?? undefined,
+        description: i.description ?? undefined,
+        content: i.content ?? undefined,
+        keywords: i.keywords ?? []
       }))
     )
   }
