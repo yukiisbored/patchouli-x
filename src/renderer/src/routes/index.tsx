@@ -47,6 +47,18 @@ function Index(): JSX.Element {
     }
   })
 
+  trpc.documents.onRemove.useSubscription(undefined, {
+    onData: () => {
+      utils.documents.invalidate()
+    }
+  })
+
+  trpc.documents.onUpdate.useSubscription(undefined, {
+    onData: () => {
+      utils.documents.invalidate()
+    }
+  })
+
   return (
     <VStack align="stretch">
       <ScrapeModal isOpen={isOpen} onClose={onClose} />
