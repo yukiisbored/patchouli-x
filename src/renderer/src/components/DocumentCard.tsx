@@ -14,10 +14,10 @@ import faviconFallback from './external-link.svg'
 
 export interface DocumentCardProps {
   url: string
-  title: string | null
-  description: string | null
-  image: string | null
-  favicon: string | null
+  title?: string | null
+  description?: string | null
+  image?: string | null
+  favicon?: string | null
 }
 
 export default function DocumentCard({

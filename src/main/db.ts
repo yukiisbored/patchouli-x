@@ -1,19 +1,22 @@
-import { mkdir, writeFile } from 'fs/promises'
-import { join } from 'path'
+import { mkdir, writeFile, readdir } from 'fs/promises'
+import { basename, join, resolve } from 'path'
 import { ulid } from 'ulid'
 import { ScrapeResult } from './scraper'
 import {
   create as orama,
   insert as oramaInsert,
-  insertMultiple as oramaInsertMultiple,
-  search as oramaSearch
+  search as oramaSearch,
+  remove as oramaRemove,
+  update as oramaUpdate,
+  insertMultiple as oramaInsertMultiple
 } from '@orama/orama'
 import { documentsStore as oramaDocumentsStore } from '@orama/orama/components'
 import { Settings } from './settings'
 import z from 'zod'
-import { readdir, readFile } from 'node:fs/promises'
+import { readFile } from 'node:fs/promises'
+import { EventEmitter } from 'stream'
+import chokidar from 'chokidar'
 import { Tuple } from './utils'
-import invariant from 'tiny-invariant'
 
 const zDateTime = z
   .string()
@@ -49,6 +52,7 @@ export type Result = {
 export async function createDB({ dataPath }: Settings) {
   await mkdir(dataPath, { recursive: true })
 
+  const ee = new EventEmitter()
   const store = await oramaDocumentsStore.createDocumentsStore()
   const documentIndex = await orama({
     schema: {
@@ -75,36 +79,84 @@ export async function createDB({ dataPath }: Settings) {
     }
   })
 
-  // HACK: For now, we'll assume the store is static and can only grow
-  let cachedDocumentsIds: string[] | undefined = undefined
+  const watcher = chokidar.watch(dataPath, { depth: 0, ignoreInitial: true })
+  let cachedDocumentsIds: string[] = []
 
-  async function getDocumentIds(): Promise<string[]> {
-    if (cachedDocumentsIds) return cachedDocumentsIds
+  watcher.on('addDir', async (path) => {
+    const id = basename(path)
 
+    if (!z.string().ulid().safeParse(id).success) {
+      return
+    }
+
+    console.log('Adding document', id)
+    const { url, title, description, content, keywords } = await getDocument(id)
+
+    cachedDocumentsIds = [id, ...cachedDocumentsIds].toSorted((a, b) =>
+      b.localeCompare(a, 'en', { sensitivity: 'base' })
+    )
+
+    await oramaInsert(documentIndex, {
+      id,
+      url,
+      title: title ?? undefined,
+      description: description ?? undefined,
+      content: content ?? undefined,
+      keywords: keywords ?? []
+    })
+
+    watcher.add(join(path, 'meta.json'))
+    ee.emit('document:add', id)
+  })
+
+  watcher.on('unlinkDir', async (path) => {
+    const id = basename(path)
+
+    if (!z.string().ulid().safeParse(id).success) {
+      return
+    }
+
+    console.log('Removing document', id)
+    watcher.unwatch(join(path, 'meta.json'))
+    cachedDocumentsIds = cachedDocumentsIds.filter((i) => i !== id)
+    await oramaRemove(documentIndex, id)
+
+    ee.emit('document:remove', id)
+  })
+
+  watcher.on('change', async (path) => {
+    const id = basename(resolve(path, '..'))
+    console.log('Change detected', id)
+
+    if (!z.string().ulid().safeParse(id).success) {
+      return
+    }
+
+    console.log('Updating document', id)
+    const { url, title, description, content, keywords } = await getDocument(id)
+
+    await oramaUpdate(documentIndex, id, {
+      id,
+      url,
+      title: title ?? undefined,
+      description: description ?? undefined,
+      content: content ?? undefined,
+      keywords: keywords ?? []
+    })
+
+    ee.emit('document:update', id)
+  })
+
+  async function scan(): Promise<void> {
     const dir = await readdir(dataPath, { withFileTypes: true })
 
-    const res = dir
+    const documentParseJobs = dir
       .filter((i) => i.isDirectory())
       .filter((i) => z.string().ulid().safeParse(i.name).success)
       .map((i) => i.name)
       // Our canonical IDs are ULIDs which are lexicographically sortable. This is fine.
       .toSorted((a, b) => b.localeCompare(a, 'en', { sensitivity: 'base' }))
-
-    cachedDocumentsIds = res
-
-    return res
-  }
-
-  async function getDocument(id: string): Promise<Meta> {
-    const documentPath = join(dataPath, id)
-    const metaPath = join(documentPath, 'meta.json')
-    const metaRaw = await readFile(metaPath, 'utf-8')
-
-    return metaSchema.parseAsync(JSON.parse(metaRaw))
-  }
-
-  async function scan(): Promise<void> {
-    const documentParseJobs = (await getDocumentIds()).map(getDocument)
+      .map(getDocument)
 
     const { l: resolved } = await Promise.allSettled(documentParseJobs).then((res) =>
       res.reduce(
@@ -122,6 +174,8 @@ export async function createDB({ dataPath }: Settings) {
       return
     }
 
+    cachedDocumentsIds = resolved.map((i) => i.id)
+    watcher.add(resolved.map((i) => join(dataPath, i.id, 'meta.json')))
     await oramaInsertMultiple(
       documentIndex,
       resolved.map((i) => ({
@@ -132,6 +186,18 @@ export async function createDB({ dataPath }: Settings) {
         keywords: i.keywords ?? []
       }))
     )
+  }
+
+  async function getDocumentIds(): Promise<string[]> {
+    return cachedDocumentsIds
+  }
+
+  async function getDocument(id: string): Promise<Meta> {
+    const documentPath = join(dataPath, id)
+    const metaPath = join(documentPath, 'meta.json')
+    const metaRaw = await readFile(metaPath, 'utf-8')
+
+    return metaSchema.parseAsync(JSON.parse(metaRaw))
   }
 
   async function fetchDocuments(page: number = 1, pageSize: number = 25): Promise<Result> {
@@ -171,7 +237,7 @@ export async function createDB({ dataPath }: Settings) {
   async function insertDocumentFromScrape(res: ScrapeResult): Promise<Meta> {
     const id = ulid()
 
-    const { title, description, content, url, htmlContent } = res
+    const { htmlContent } = res
 
     const documentPath = join(dataPath, id)
     await mkdir(documentPath)
@@ -191,24 +257,19 @@ export async function createDB({ dataPath }: Settings) {
 
     await writeFile(metaPath, JSON.stringify(meta, null, 2))
 
-    invariant(cachedDocumentsIds, 'Cached Document IDs should be initialized by now')
-    cachedDocumentsIds = [id, ...cachedDocumentsIds]
-
-    await oramaInsert(documentIndex, {
-      id,
-      url,
-      title: title ?? undefined,
-      description: description ?? undefined,
-      content: content ?? undefined
-    })
-
     return meta
+  }
+
+  async function close(): Promise<void> {
+    await watcher.close()
   }
 
   return {
     scan,
     fetchDocuments,
     insertDocumentFromScrape,
-    searchDocuments
+    searchDocuments,
+    close,
+    ee
   }
 }

@@ -1,13 +1,10 @@
 import { initTRPC } from '@trpc/server'
 import { observable } from '@trpc/server/observable'
-import EventEmitter from 'events'
 
 import z from 'zod'
 
 import { scrape } from './scraper'
 import { DB } from './db'
-
-const ee = new EventEmitter()
 
 const t = initTRPC.context<{ db: DB }>().create({ isServer: true })
 
@@ -34,10 +31,15 @@ export const router = t.router({
       } = req
 
       const res = await scrape(url)
-      const doc = await insertDocumentFromScrape(res)
-      ee.emit('document:add', doc)
+      await insertDocumentFromScrape(res)
     }),
-    onAdd: t.procedure.subscription(() => {
+    onAdd: t.procedure.subscription((req) => {
+      const {
+        ctx: {
+          db: { ee }
+        }
+      } = req
+
       return observable((emit) => {
         function onAdd(res: string): void {
           emit.next({ res })
@@ -47,6 +49,44 @@ export const router = t.router({
 
         return (): void => {
           ee.off('document:add', onAdd)
+        }
+      })
+    }),
+    onRemove: t.procedure.subscription((req) => {
+      const {
+        ctx: {
+          db: { ee }
+        }
+      } = req
+
+      return observable((emit) => {
+        function onRemove(res: string): void {
+          emit.next({ res })
+        }
+
+        ee.on('document:remove', onRemove)
+
+        return (): void => {
+          ee.off('document:remove', onRemove)
+        }
+      })
+    }),
+    onUpdate: t.procedure.subscription((req) => {
+      const {
+        ctx: {
+          db: { ee }
+        }
+      } = req
+
+      return observable((emit) => {
+        function onUpdate(res: string): void {
+          emit.next({ res })
+        }
+
+        ee.on('document:update', onUpdate)
+
+        return (): void => {
+          ee.off('document:update', onUpdate)
         }
       })
     })

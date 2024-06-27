@@ -64,6 +64,10 @@ app.whenReady().then(async () => {
   app.on('activate', function () {
     if (BrowserWindow.getAllWindows().length === 0) createWindow(db)
   })
+
+  app.on('before-quit', async () => {
+    await db.close()
+  })
 })
 
 app.on('window-all-closed', () => {
