@@ -11,6 +11,7 @@ import {
   insertMultiple as oramaInsertMultiple
 } from '@orama/orama'
 import { documentsStore as oramaDocumentsStore } from '@orama/orama/components'
+import { stopwords as stopWords } from '@orama/stopwords/english'
 import { Settings } from './settings'
 import z from 'zod'
 import { readFile } from 'node:fs/promises'
@@ -75,6 +76,10 @@ export async function createDB({ dataPath }: Settings) {
         store(ctx, id, { id: docId }) {
           return store.store(ctx, id, { id: docId })
         }
+      },
+      tokenizer: {
+        stemming: true,
+        stopWords
       }
     }
   })
