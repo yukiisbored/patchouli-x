@@ -17,6 +17,7 @@ import { readFile } from 'node:fs/promises'
 import { EventEmitter } from 'stream'
 import chokidar from 'chokidar'
 import { SortedArray } from './utils'
+import { LRUCacheWithDelete } from 'mnemonist'
 
 const zDateTime = z
   .string()
@@ -90,6 +91,7 @@ export async function createDB({ dataPath }: Settings) {
   const cachedDocumentIds = SortedArray<string>((a, b) =>
     b.localeCompare(a, 'en', { sensitivity: 'base' })
   )
+  const cache = new LRUCacheWithDelete<string, Meta>(1000)
 
   async function insert(id: string, document: Meta) {
     cachedDocumentIds.insert(id)
@@ -106,11 +108,13 @@ export async function createDB({ dataPath }: Settings) {
 
   async function remove(id: string) {
     cachedDocumentIds.remove(id)
+    cache.delete(id)
     watcher.unwatch(join(dataPath, id, 'meta.json'))
     await oramaRemove(documentIndex, id)
   }
 
   async function update(id: string, document: Meta) {
+    cache.delete(id)
     await oramaUpdate(documentIndex, id, {
       id,
       url: document.url,
@@ -121,6 +125,14 @@ export async function createDB({ dataPath }: Settings) {
     })
   }
 
+  async function read(id: string) {
+    const documentPath = join(dataPath, id)
+    const metaPath = join(documentPath, 'meta.json')
+    const metaRaw = await readFile(metaPath, 'utf-8')
+
+    return metaSchema.parseAsync(JSON.parse(metaRaw))
+  }
+
   watcher.on('addDir', async (path) => {
     const id = basename(path)
 
@@ -129,7 +141,7 @@ export async function createDB({ dataPath }: Settings) {
     }
 
     console.log('Adding document', id)
-    const document = await getDocument(id)
+    const document = await read(id)
 
     insert(id, document)
     ee.emit('document:add', id)
@@ -156,7 +168,7 @@ export async function createDB({ dataPath }: Settings) {
     }
 
     console.log('Updating document', id)
-    const document = await getDocument(id)
+    const document = await read(id)
     await update(id, document)
     ee.emit('document:update', id)
   })
@@ -186,11 +198,13 @@ export async function createDB({ dataPath }: Settings) {
   }
 
   async function getDocument(id: string): Promise<Meta> {
-    const documentPath = join(dataPath, id)
-    const metaPath = join(documentPath, 'meta.json')
-    const metaRaw = await readFile(metaPath, 'utf-8')
+    async function readAndCache(id: string) {
+      const document = await read(id)
+      cache.set(id, document)
+      return document
+    }
 
-    return metaSchema.parseAsync(JSON.parse(metaRaw))
+    return cache.get(id) ?? readAndCache(id)
   }
 
   async function fetchDocuments(page: number = 1, pageSize: number = 25): Promise<Result> {
