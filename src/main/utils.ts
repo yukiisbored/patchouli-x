@@ -1,3 +1,5 @@
+import z from 'zod'
+
 export type Ok<T> = { success: true; data: T }
 export type Err<E> = { success: false; error: E }
 export type Result<T, E> = Err<E> | Ok<T>
@@ -59,4 +61,8 @@ export function SortedArray<T>(compare: (a: T, b: T) => number, initial: T[] = [
     remove,
     contains
   }
+}
+
+export function isUlid(id: string): boolean {
+  return z.string().ulid().safeParse(id).success
 }

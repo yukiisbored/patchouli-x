@@ -1,14 +1,11 @@
-import { app, BrowserWindow, shell } from 'electron'
+import { app, BrowserWindow, shell, utilityProcess } from 'electron'
 import { join } from 'path'
 import { electronApp, is, optimizer } from '@electron-toolkit/utils'
-import { createIPCHandler } from 'electron-trpc/main'
 import icon from '../../resources/icon.png?asset'
-import { router, type Context } from './api'
-import { Database } from './db'
 import { loadSettings } from './settings'
-import { EventEmitter } from 'stream'
+import server from './server/main?modulePath'
 
-function createWindow(context: Context): void {
+function createWindow(): void {
   const mainWindow = new BrowserWindow({
     minWidth: 900,
     width: 900,
@@ -23,12 +20,6 @@ function createWindow(context: Context): void {
   })
 
   mainWindow.setMinimumSize(768, 600)
-
-  createIPCHandler({
-    router,
-    windows: [mainWindow],
-    createContext: () => Promise.resolve(context)
-  })
 
   mainWindow.on('ready-to-show', () => {
     mainWindow.show()
@@ -57,21 +48,16 @@ app.whenReady().then(async () => {
   })
 
   const settings = await loadSettings()
-  const ee = new EventEmitter()
-  const db = Database({
-    ...settings,
-    ee
-  })
+  const child = utilityProcess.fork(server, [JSON.stringify(settings)])
 
-  createWindow({ ee, db })
+  createWindow()
 
   app.on('activate', function () {
-    if (BrowserWindow.getAllWindows().length === 0) createWindow({ ee, db })
+    if (BrowserWindow.getAllWindows().length === 0) createWindow()
   })
 
   app.on('before-quit', async () => {
-    const { close } = await db
-    await close()
+    child.kill()
   })
 })
 

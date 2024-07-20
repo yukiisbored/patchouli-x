@@ -1,22 +1,22 @@
-import { mkdir, writeFile, readdir } from 'fs/promises'
+import { mkdir, readdir, writeFile } from 'fs/promises'
 import { basename, join, resolve } from 'path'
 import { ulid } from 'ulid'
-import { ScrapeResult } from './scraper'
+import { ScrapeResult } from '../scraper'
 import {
   create as orama,
   insert as oramaInsert,
-  search as oramaSearch,
   remove as oramaRemove,
+  search as oramaSearch,
   update as oramaUpdate
 } from '@orama/orama'
 import { documentsStore as oramaDocumentsStore } from '@orama/orama/components'
 import { stopwords as stopWords } from '@orama/stopwords/english'
-import { Settings } from './settings'
+import { Settings } from '../settings'
 import z from 'zod'
 import { readFile } from 'node:fs/promises'
 import { EventEmitter } from 'stream'
 import chokidar from 'chokidar'
-import { SortedArray } from './utils'
+import { isUlid, SortedArray } from '../utils'
 import { LRUCacheWithDelete } from 'mnemonist'
 
 const zDateTime = z
@@ -45,10 +45,6 @@ export type Meta = z.infer<typeof metaSchema>
 export type Result = {
   items: Array<Meta>
   nextPage?: number
-}
-
-function isUlid(id: string): boolean {
-  return z.string().ulid().safeParse(id).success
 }
 
 type DatabaseProps = Settings & {

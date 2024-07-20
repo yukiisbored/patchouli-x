@@ -3,7 +3,7 @@ import { observable } from '@trpc/server/observable'
 
 import z from 'zod'
 
-import { scrape } from './scraper'
+import { scrape } from '../scraper'
 import { type Database } from './db'
 import { EventEmitter } from 'stream'
 
