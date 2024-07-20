@@ -4,7 +4,7 @@ import { RouterProvider, createRouter, createHashHistory } from '@tanstack/react
 import { trpc } from '@/trpc'
 
 import { routeTree } from '@/routeTree.gen'
-import { httpBatchLink } from '@trpc/client'
+import { ipcLink } from './ipcLink'
 
 const history = createHashHistory()
 const router = createRouter({ routeTree, history })
@@ -19,11 +19,7 @@ export default function App(): JSX.Element {
   const [queryClient] = useState(() => new QueryClient())
   const [trpcClient] = useState(() =>
     trpc.createClient({
-      links: [
-        httpBatchLink({
-          url: 'http://localhost:3333'
-        })
-      ]
+      links: [ipcLink()]
     })
   )
 

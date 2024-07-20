@@ -1,21 +1,21 @@
-import { createHTTPServer } from '@trpc/server/adapters/standalone'
-import { router } from './api'
 import { Settings } from '../settings'
 import { EventEmitter } from 'stream'
 import { Database } from './db'
-import cors from 'cors'
+import { createPortServer } from './createPortServer'
+import { router } from './api'
 
+// TODO: Find less cursed way to pass settings
 const settings = JSON.parse(process.argv[process.argv.length - 1]) as Settings
+
 const ee = new EventEmitter()
 const db = Database({
   ...settings,
   ee
 })
 
-createHTTPServer({
-  middleware: cors(),
+createPortServer({
   router,
   createContext() {
-    return { db, ee }
+    return { ee, db }
   }
-}).listen(3333)
+}).catch(console.error)

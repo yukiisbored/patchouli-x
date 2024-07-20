@@ -92,4 +92,6 @@ export const router = t.router({
   })
 })
 
+router._def._config
+
 export type ApiRouter = typeof router

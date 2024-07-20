@@ -4,6 +4,7 @@ import { electronApp, is, optimizer } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
 import { loadSettings } from './settings'
 import server from './server/main?modulePath'
+import { createRelay } from './relay'
 
 function createWindow(): void {
   const mainWindow = new BrowserWindow({
@@ -49,7 +50,7 @@ app.whenReady().then(async () => {
 
   const settings = await loadSettings()
   const child = utilityProcess.fork(server, [JSON.stringify(settings)])
-
+  createRelay(child)
   createWindow()
 
   app.on('activate', function () {
