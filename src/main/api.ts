@@ -4,9 +4,15 @@ import { observable } from '@trpc/server/observable'
 import z from 'zod'
 
 import { scrape } from './scraper'
-import { DB } from './db'
+import { type Database } from './db'
+import { EventEmitter } from 'stream'
 
-const t = initTRPC.context<{ db: DB }>().create({ isServer: true })
+export type Context = {
+  db: Database
+  ee: EventEmitter
+}
+
+const t = initTRPC.context<Context>().create({ isServer: true })
 
 export const router = t.router({
   documents: t.router({
@@ -15,29 +21,26 @@ export const router = t.router({
       .query(async (req) => {
         const {
           input: { term, cursor: page, pageSize },
-          ctx: {
-            db: { fetchDocuments, searchDocuments }
-          }
+          ctx: { db }
         } = req
+
+        const { fetchDocuments, searchDocuments } = await db
 
         return term ? searchDocuments(term, page, pageSize) : fetchDocuments(page, pageSize)
       }),
     fromUrl: t.procedure.input(z.object({ url: z.string().url() })).mutation(async (req) => {
       const {
         input: { url },
-        ctx: {
-          db: { insertDocumentFromScrape }
-        }
+        ctx: { db }
       } = req
 
+      const { insertDocumentFromScrape } = await db
       const res = await scrape(url)
       await insertDocumentFromScrape(res)
     }),
     onAdd: t.procedure.subscription((req) => {
       const {
-        ctx: {
-          db: { ee }
-        }
+        ctx: { ee }
       } = req
 
       return observable((emit) => {
@@ -54,9 +57,7 @@ export const router = t.router({
     }),
     onRemove: t.procedure.subscription((req) => {
       const {
-        ctx: {
-          db: { ee }
-        }
+        ctx: { ee }
       } = req
 
       return observable((emit) => {
@@ -73,9 +74,7 @@ export const router = t.router({
     }),
     onUpdate: t.procedure.subscription((req) => {
       const {
-        ctx: {
-          db: { ee }
-        }
+        ctx: { ee }
       } = req
 
       return observable((emit) => {

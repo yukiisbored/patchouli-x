@@ -10,12 +10,13 @@ import {
   Input,
   Spinner,
   VStack,
-  useDisclosure
+  useDisclosure,
+  Center
 } from '@chakra-ui/react'
 import DocumentCard from '@/components/DocumentCard'
 import { IconPlus } from '@tabler/icons-react'
 import ScrapeModal from '@/components/ScrapeModal'
-import { Fragment, Suspense, useDeferredValue, useState } from 'react'
+import { Fragment, useDeferredValue, useState } from 'react'
 
 export const Route = createFileRoute('/')({
   component: Index
@@ -27,7 +28,7 @@ function Index(): JSX.Element {
   const deferredTerm = useDeferredValue(term)
   const isStale = deferredTerm !== term
 
-  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, status } =
+  const { data, fetchNextPage, hasNextPage, isFetchingNextPage } =
     trpc.documents.byPage.useInfiniteQuery(
       {
         term: deferredTerm,
@@ -35,7 +36,8 @@ function Index(): JSX.Element {
       },
       {
         getNextPageParam: (page) => page.nextPage,
-        initialCursor: 1
+        initialCursor: 1,
+        keepPreviousData: true
       }
     )
 
@@ -77,12 +79,13 @@ function Index(): JSX.Element {
               borderColor="white"
               placeholder="What's on your mind?"
               autoFocus
+              disabled={data === undefined}
             />
           </FormControl>
         </CardBody>
       </Card>
 
-      <Suspense fallback={<Spinner />}>
+      {data ? (
         <VStack
           align="stretch"
           w={800}
@@ -92,27 +95,23 @@ function Index(): JSX.Element {
           px={4}
           opacity={isStale ? 0.5 : 1}
         >
-          {status === 'success' && (
-            <>
-              {data.pages.map((page, i) => (
-                <Fragment key={i}>
-                  {page.items.map((doc) => (
-                    <DocumentCard key={doc.id} {...doc} />
-                  ))}
-                </Fragment>
+          {data.pages.map((page, i) => (
+            <Fragment key={i}>
+              {page.items.map((doc) => (
+                <DocumentCard key={doc.id} {...doc} />
               ))}
+            </Fragment>
+          ))}
 
-              <Button onClick={() => fetchNextPage()} disabled={!hasNextPage || isFetchingNextPage}>
-                {isFetchingNextPage
-                  ? 'Loading more...'
-                  : hasNextPage
-                    ? 'Load more'
-                    : 'Nothing more'}
-              </Button>
-            </>
-          )}
+          <Button onClick={() => fetchNextPage()} disabled={!hasNextPage || isFetchingNextPage}>
+            {isFetchingNextPage ? 'Loading more...' : hasNextPage ? 'Load more' : 'Nothing more'}
+          </Button>
         </VStack>
-      </Suspense>
+      ) : (
+        <Center flexGrow={1}>
+          <Spinner />
+        </Center>
+      )}
 
       <Card
         position="fixed"
@@ -131,6 +130,7 @@ function Index(): JSX.Element {
             size="xs"
             icon={<IconPlus />}
             onClick={onOpen}
+            disabled={data === undefined}
           />
         </HStack>
       </Card>

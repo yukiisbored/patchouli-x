@@ -42,8 +42,6 @@ const metaSchema = z.object({
 
 export type Meta = z.infer<typeof metaSchema>
 
-export type DB = Awaited<ReturnType<typeof createDB>>
-
 export type Result = {
   items: Array<Meta>
   nextPage?: number
@@ -53,10 +51,13 @@ function isUlid(id: string): boolean {
   return z.string().ulid().safeParse(id).success
 }
 
-export async function createDB({ dataPath }: Settings) {
-  await mkdir(dataPath, { recursive: true })
+type DatabaseProps = Settings & {
+  ee: EventEmitter
+}
 
-  const ee = new EventEmitter()
+export type Database = ReturnType<typeof Database>
+
+export async function Database({ dataPath, ee }: DatabaseProps) {
   const store = await oramaDocumentsStore.createDocumentsStore()
   const documentIndex = await orama({
     schema: {
@@ -92,6 +93,10 @@ export async function createDB({ dataPath }: Settings) {
     b.localeCompare(a, 'en', { sensitivity: 'base' })
   )
   const cache = new LRUCacheWithDelete<string, Meta>(1000)
+
+  async function close(): Promise<void> {
+    await watcher.close()
+  }
 
   async function insert(id: string, document: Meta) {
     cachedDocumentIds.insert(id)
@@ -133,6 +138,89 @@ export async function createDB({ dataPath }: Settings) {
     return metaSchema.parseAsync(JSON.parse(metaRaw))
   }
 
+  async function get(id: string): Promise<Meta> {
+    async function readAndCache(id: string) {
+      const document = await read(id)
+      cache.set(id, document)
+      return document
+    }
+
+    return cache.get(id) ?? readAndCache(id)
+  }
+
+  async function fetchDocuments(page: number = 1, pageSize: number = 25): Promise<Result> {
+    const start = (page - 1) * pageSize
+    const end = start + pageSize
+    const items = await Promise.all(cachedDocumentIds.get().slice(start, end).map(get))
+
+    const nextPage = items.length === pageSize ? page + 1 : undefined
+
+    return {
+      items,
+      nextPage
+    }
+  }
+
+  async function searchDocuments(
+    term: string,
+    page: number = 1,
+    pageSize: number = 25
+  ): Promise<Result> {
+    const res = await oramaSearch(documentIndex, {
+      term,
+      limit: pageSize,
+      offset: (page - 1) * pageSize
+    })
+
+    const ids = res.hits.map((i) => i.document.id)
+    const nextPage = ids.length === pageSize ? pageSize + 1 : undefined
+    const items = await Promise.all(ids.map(get))
+
+    return {
+      items,
+      nextPage
+    }
+  }
+
+  async function insertDocumentFromScrape(res: ScrapeResult): Promise<Meta> {
+    const id = ulid()
+
+    const { htmlContent } = res
+
+    const documentPath = join(dataPath, id)
+    await mkdir(documentPath)
+
+    const htmlPath = join(documentPath, 'index.html')
+    await writeFile(htmlPath, htmlContent)
+
+    const metaPath = join(documentPath, 'meta.json')
+    const meta = {
+      ...res,
+      htmlContent: undefined,
+      version: 0,
+      id,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    } as Meta
+
+    await writeFile(metaPath, JSON.stringify(meta, null, 2))
+
+    return meta
+  }
+
+  await mkdir(dataPath, { recursive: true })
+
+  await Promise.allSettled(
+    (await readdir(dataPath, { withFileTypes: true }))
+      .filter((i) => i.isDirectory())
+      .filter((i) => isUlid(i.name))
+      .map((i) => i.name)
+      .map(async (id) => {
+        const document = await read(id)
+        await insert(id, document)
+      })
+  )
+
   watcher.on('addDir', async (path) => {
     const id = basename(path)
 
@@ -173,110 +261,10 @@ export async function createDB({ dataPath }: Settings) {
     ee.emit('document:update', id)
   })
 
-  async function scan(): Promise<void> {
-    const dir = await readdir(dataPath, { withFileTypes: true })
-
-    for (const i of dir) {
-      if (!i.isDirectory()) {
-        continue
-      }
-
-      if (!z.string().ulid().safeParse(i.name).success) {
-        continue
-      }
-
-      const id = i.name
-
-      try {
-        const document = await getDocument(id)
-        insert(id, document)
-      } catch (e) {
-        console.error('Error parsing document', id, e)
-        continue
-      }
-    }
-  }
-
-  async function getDocument(id: string): Promise<Meta> {
-    async function readAndCache(id: string) {
-      const document = await read(id)
-      cache.set(id, document)
-      return document
-    }
-
-    return cache.get(id) ?? readAndCache(id)
-  }
-
-  async function fetchDocuments(page: number = 1, pageSize: number = 25): Promise<Result> {
-    const start = (page - 1) * pageSize
-    const end = start + pageSize
-    const items = await Promise.all(cachedDocumentIds.get().slice(start, end).map(getDocument))
-
-    const nextPage = items.length === pageSize ? page + 1 : undefined
-
-    return {
-      items,
-      nextPage
-    }
-  }
-
-  async function searchDocuments(
-    term: string,
-    page: number = 1,
-    pageSize: number = 25
-  ): Promise<Result> {
-    const res = await oramaSearch(documentIndex, {
-      term,
-      limit: pageSize,
-      offset: (page - 1) * pageSize
-    })
-
-    const ids = res.hits.map((i) => i.document.id)
-    const nextPage = ids.length === pageSize ? pageSize + 1 : undefined
-    const items = await Promise.all(ids.map(getDocument))
-
-    return {
-      items,
-      nextPage
-    }
-  }
-
-  async function insertDocumentFromScrape(res: ScrapeResult): Promise<Meta> {
-    const id = ulid()
-
-    const { htmlContent } = res
-
-    const documentPath = join(dataPath, id)
-    await mkdir(documentPath)
-
-    const htmlPath = join(documentPath, 'index.html')
-    await writeFile(htmlPath, htmlContent)
-
-    const metaPath = join(documentPath, 'meta.json')
-    const meta = {
-      ...res,
-      htmlContent: undefined,
-      version: 0,
-      id,
-      createdAt: new Date(),
-      updatedAt: new Date()
-    } as Meta
-
-    await writeFile(metaPath, JSON.stringify(meta, null, 2))
-
-    return meta
-  }
-
-  async function close(): Promise<void> {
-    await watcher.close()
-  }
-
   return {
-    scan,
     fetchDocuments,
     insertDocumentFromScrape,
     searchDocuments,
-    close,
-    ee
+    close
   }
 }

@@ -3,11 +3,12 @@ import { join } from 'path'
 import { electronApp, is, optimizer } from '@electron-toolkit/utils'
 import { createIPCHandler } from 'electron-trpc/main'
 import icon from '../../resources/icon.png?asset'
-import { router } from './api'
-import { createDB, DB } from './db'
+import { router, type Context } from './api'
+import { Database } from './db'
 import { loadSettings } from './settings'
+import { EventEmitter } from 'stream'
 
-function createWindow(db: DB): void {
+function createWindow(context: Context): void {
   const mainWindow = new BrowserWindow({
     minWidth: 900,
     width: 900,
@@ -26,7 +27,7 @@ function createWindow(db: DB): void {
   createIPCHandler({
     router,
     windows: [mainWindow],
-    createContext: () => Promise.resolve({ db })
+    createContext: () => Promise.resolve(context)
   })
 
   mainWindow.on('ready-to-show', () => {
@@ -56,17 +57,21 @@ app.whenReady().then(async () => {
   })
 
   const settings = await loadSettings()
-  const db = await createDB(settings)
-  await db.scan()
+  const ee = new EventEmitter()
+  const db = Database({
+    ...settings,
+    ee
+  })
 
-  createWindow(db)
+  createWindow({ ee, db })
 
   app.on('activate', function () {
-    if (BrowserWindow.getAllWindows().length === 0) createWindow(db)
+    if (BrowserWindow.getAllWindows().length === 0) createWindow({ ee, db })
   })
 
   app.on('before-quit', async () => {
-    await db.close()
+    const { close } = await db
+    await close()
   })
 })
 
