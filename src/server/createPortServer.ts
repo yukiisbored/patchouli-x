@@ -37,7 +37,7 @@ import {
   MaybePromise,
   TRPCError
 } from '@trpc/server'
-import { IPCRequest } from '../relay'
+import { IPCRequest } from '../main/relay'
 
 type CreatePortServerProps<TRouter extends AnyRouter> = {
   router: TRouter
@@ -48,11 +48,11 @@ export async function createPortServer<TRouter extends AnyRouter>({
   router,
   createContext
 }: CreatePortServerProps<TRouter>) {
-  const ctx = (await createContext?.()) ?? {}
-
   const subscriptions = new Map<string | number, Unsubscribable>()
 
   process.parentPort.on('message', async (event) => {
+    const ctx = (await createContext?.()) ?? {}
+
     const request = event.data as IPCRequest
 
     if (request.method === 'subscription.stop') {

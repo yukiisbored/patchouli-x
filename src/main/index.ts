@@ -2,8 +2,7 @@ import { app, BrowserWindow, shell, utilityProcess } from 'electron'
 import { join } from 'path'
 import { electronApp, is, optimizer } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
-import { loadSettings } from './settings'
-import server from './server/main?modulePath'
+import server from '../server?modulePath'
 import { createRelay } from './relay'
 
 function createWindow(): void {
@@ -48,8 +47,8 @@ app.whenReady().then(async () => {
     optimizer.watchWindowShortcuts(window)
   })
 
-  const settings = await loadSettings()
-  const child = utilityProcess.fork(server, [JSON.stringify(settings)])
+  const privatePath = join(app.getPath('userData'), 'Patchouli Private')
+  const child = utilityProcess.fork(server, [privatePath], { serviceName: 'Patchouli Server' })
   createRelay(child)
   createWindow()
 

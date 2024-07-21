@@ -18,8 +18,7 @@ export default function ScrapeModal({
   const mutation = trpc.documents.fromUrl.useMutation()
 
   async function onSubmit(url: string): Promise<void> {
-    const res = await mutation.mutateAsync({ url })
-    console.log(res)
+    await mutation.mutateAsync({ url })
     onClose()
   }
 

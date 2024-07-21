@@ -1,44 +1,66 @@
-import { initTRPC } from '@trpc/server'
+import { initTRPC, TRPCError } from '@trpc/server'
 import { observable } from '@trpc/server/observable'
-
 import z from 'zod'
 
-import { scrape } from '../scraper'
-import { type Database } from './db'
-import { EventEmitter } from 'stream'
-
-export type Context = {
-  db: Database
-  ee: EventEmitter
-}
+import { scrape } from './scraper'
+import { Context, unwrapCtx } from './context'
 
 const t = initTRPC.context<Context>().create({ isServer: true })
 
+const databaseProcedure = t.procedure.use(async (opts) => {
+  const { ctx: unwrappedCtx } = opts
+
+  const ctx = unwrapCtx(unwrappedCtx)
+
+  return opts.next({
+    ctx: {
+      ...ctx,
+      db: await ctx.db
+    }
+  })
+})
+
 export const router = t.router({
+  system: t.router({
+    configure: t.procedure.mutation(async () => {
+      throw new TRPCError({
+        code: 'NOT_IMPLEMENTED',
+        message: 'Not implemented yet, sorry.'
+      })
+    }),
+    status: t.procedure.query(async (req) => {
+      const {
+        ctx: { status }
+      } = req
+
+      return status
+    })
+  }),
   documents: t.router({
-    byPage: t.procedure
+    byPage: databaseProcedure
       .input(z.object({ term: z.string().optional(), cursor: z.number(), pageSize: z.number() }))
       .query(async (req) => {
         const {
           input: { term, cursor: page, pageSize },
-          ctx: { db }
+          ctx: {
+            db: { fetchDocuments, searchDocuments }
+          }
         } = req
-
-        const { fetchDocuments, searchDocuments } = await db
 
         return term ? searchDocuments(term, page, pageSize) : fetchDocuments(page, pageSize)
       }),
-    fromUrl: t.procedure.input(z.object({ url: z.string().url() })).mutation(async (req) => {
+    fromUrl: databaseProcedure.input(z.object({ url: z.string().url() })).mutation(async (req) => {
       const {
         input: { url },
-        ctx: { db }
+        ctx: {
+          db: { insertDocumentFromScrape }
+        }
       } = req
 
-      const { insertDocumentFromScrape } = await db
       const res = await scrape(url)
       await insertDocumentFromScrape(res)
     }),
-    onAdd: t.procedure.subscription((req) => {
+    onAdd: databaseProcedure.subscription((req) => {
       const {
         ctx: { ee }
       } = req
@@ -55,7 +77,7 @@ export const router = t.router({
         }
       })
     }),
-    onRemove: t.procedure.subscription((req) => {
+    onRemove: databaseProcedure.subscription((req) => {
       const {
         ctx: { ee }
       } = req
@@ -72,7 +94,7 @@ export const router = t.router({
         }
       })
     }),
-    onUpdate: t.procedure.subscription((req) => {
+    onUpdate: databaseProcedure.subscription((req) => {
       const {
         ctx: { ee }
       } = req
@@ -91,7 +113,5 @@ export const router = t.router({
     })
   })
 })
-
-router._def._config
 
 export type ApiRouter = typeof router

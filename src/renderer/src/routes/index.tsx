@@ -17,12 +17,15 @@ import DocumentCard from '@/components/DocumentCard'
 import { IconPlus } from '@tabler/icons-react'
 import ScrapeModal from '@/components/ScrapeModal'
 import { Fragment, useDeferredValue, useState } from 'react'
+import { useEnsureConfigured } from '../utils'
 
 export const Route = createFileRoute('/')({
   component: Index
 })
 
 function Index(): JSX.Element {
+  useEnsureConfigured()
+
   const utils = trpc.useUtils()
   const [term, setTerm] = useState('')
   const deferredTerm = useDeferredValue(term)

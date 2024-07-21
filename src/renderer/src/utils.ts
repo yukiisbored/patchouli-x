@@ -1,20 +1,23 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-import { mergeThemeOverride } from '@chakra-ui/react'
+import { trpc } from './trpc'
+import { useNavigate } from '@tanstack/react-router'
+import { useEffect } from 'react'
 
-export function withBaseStyle(
-  baseStyle: Record<string, any>
-): (theme: Record<string, any>) => Record<string, any> {
-  return (theme) => {
-    const names = Object.keys(theme.components)
-    return mergeThemeOverride(theme, {
-      components: Object.fromEntries(
-        names.map((name) => {
-          const withBaseStyle = {
-            baseStyle: baseStyle
-          }
-          return [name, withBaseStyle]
-        })
-      )
-    })
-  }
+// TODO: Find better solution that doesn't depend on React Hooks.
+//       So, we could run this in the loader instead, outside of React DOM hydrate/render.
+export function useEnsureConfigured() {
+  const navigate = useNavigate()
+  const utils = trpc.useUtils()
+
+  useEffect(() => {
+    async function checkStatus() {
+      const status = await utils.system.status.fetch()
+      if (status == 'configured') {
+        return
+      }
+
+      await navigate({ to: '/setup' })
+    }
+
+    checkStatus().catch(console.error)
+  }, [navigate, utils])
 }

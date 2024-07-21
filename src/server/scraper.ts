@@ -1,6 +1,6 @@
 import { Readability } from '@mozilla/readability'
 import { JSDOM } from 'jsdom'
-import { type Meta } from './server/db'
+import { type Meta } from './db'
 import { ulid } from 'ulid'
 
 export type ScrapeResult = Meta & { htmlContent: string }

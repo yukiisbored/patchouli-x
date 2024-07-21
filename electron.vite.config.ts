@@ -16,6 +16,12 @@ export default defineConfig({
         '@': resolve('src/renderer/src')
       }
     },
-    plugins: [react(), TanStackRouterVite()]
+    plugins: [
+      react(),
+      TanStackRouterVite({
+        routesDirectory: resolve(__dirname, 'src/renderer/src/routes'),
+        generatedRouteTree: resolve(__dirname, 'src/renderer/src/routeTree.gen.ts')
+      })
+    ]
   }
 })

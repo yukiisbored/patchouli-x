@@ -32,7 +32,13 @@ export function createRelay(child: UtilityProcess) {
   })
 
   child.on('message', (resp: unknown & { id: number }) => {
-    const request = pendingRequests.get(resp.id)!
+    const request = pendingRequests.get(resp.id)
+
+    if (request === undefined) {
+      // We fail silently
+      return
+    }
+
     const { event, type } = request
 
     if (event.sender.isDestroyed()) {

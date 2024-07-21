@@ -1,7 +1,7 @@
 import { mkdir, readdir, writeFile } from 'fs/promises'
 import { basename, join, resolve } from 'path'
 import { ulid } from 'ulid'
-import { ScrapeResult } from '../scraper'
+import { ScrapeResult } from './scraper'
 import {
   create as orama,
   insert as oramaInsert,
@@ -11,12 +11,12 @@ import {
 } from '@orama/orama'
 import { documentsStore as oramaDocumentsStore } from '@orama/orama/components'
 import { stopwords as stopWords } from '@orama/stopwords/english'
-import { Settings } from '../settings'
+import { Settings } from './settings'
 import z from 'zod'
 import { readFile } from 'node:fs/promises'
 import { EventEmitter } from 'stream'
 import chokidar from 'chokidar'
-import { isUlid, SortedArray } from '../utils'
+import { isUlid, SortedArray } from './utils'
 import { LRUCacheWithDelete } from 'mnemonist'
 
 const zDateTime = z
@@ -47,13 +47,15 @@ export type Result = {
   nextPage?: number
 }
 
-type DatabaseProps = Settings & {
+type DatabaseProps = {
+  settings: Settings
   ee: EventEmitter
 }
 
 export type Database = ReturnType<typeof Database>
 
-export async function Database({ dataPath, ee }: DatabaseProps) {
+export async function Database({ settings, ee }: DatabaseProps) {
+  const { dataPath } = settings
   const store = await oramaDocumentsStore.createDocumentsStore()
   const documentIndex = await orama({
     schema: {
@@ -258,6 +260,7 @@ export async function Database({ dataPath, ee }: DatabaseProps) {
   })
 
   return {
+    settings,
     fetchDocuments,
     insertDocumentFromScrape,
     searchDocuments,
