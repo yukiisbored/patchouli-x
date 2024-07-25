@@ -1,13 +1,11 @@
-import { app, BrowserWindow, shell } from 'electron'
-import { join } from 'path'
+import { join } from 'node:path'
 import { electronApp, is, optimizer } from '@electron-toolkit/utils'
-import { createIPCHandler } from 'electron-trpc/main'
+import { BrowserWindow, app, shell, utilityProcess } from 'electron'
 import icon from '../../resources/icon.png?asset'
-import { router } from './api'
-import { createDB, DB } from './db'
-import { loadSettings } from './settings'
+import server from '../server?modulePath'
+import { createRelay } from './relay'
 
-function createWindow(db: DB): void {
+function createWindow(): void {
   const mainWindow = new BrowserWindow({
     minWidth: 900,
     width: 900,
@@ -23,12 +21,6 @@ function createWindow(db: DB): void {
 
   mainWindow.setMinimumSize(768, 600)
 
-  createIPCHandler({
-    router,
-    windows: [mainWindow],
-    createContext: () => Promise.resolve({ db })
-  })
-
   mainWindow.on('ready-to-show', () => {
     mainWindow.show()
   })
@@ -40,8 +32,8 @@ function createWindow(db: DB): void {
 
   // HMR for renderer base on electron-vite cli.
   // Load the remote URL for development or the local html file for production.
-  if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
-    mainWindow.loadURL(process.env['ELECTRON_RENDERER_URL'])
+  if (is.dev && process.env.ELECTRON_RENDERER_URL) {
+    mainWindow.loadURL(process.env.ELECTRON_RENDERER_URL)
   } else {
     mainWindow.loadFile(join(__dirname, '../renderer/index.html'))
   }
@@ -55,18 +47,19 @@ app.whenReady().then(async () => {
     optimizer.watchWindowShortcuts(window)
   })
 
-  const settings = await loadSettings()
-  const db = await createDB(settings)
-  await db.scan()
+  const privatePath = join(app.getPath('userData'), 'Patchouli Private')
+  const child = utilityProcess.fork(server, [privatePath], {
+    serviceName: 'Patchouli Server'
+  })
+  createRelay(child)
+  createWindow()
 
-  createWindow(db)
-
-  app.on('activate', function () {
-    if (BrowserWindow.getAllWindows().length === 0) createWindow(db)
+  app.on('activate', () => {
+    if (BrowserWindow.getAllWindows().length === 0) createWindow()
   })
 
   app.on('before-quit', async () => {
-    await db.close()
+    child.kill()
   })
 })
 

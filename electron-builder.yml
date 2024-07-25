@@ -6,12 +6,13 @@ files:
   - '!**/.vscode/*'
   - '!src/*'
   - '!electron.vite.config.{js,ts,mjs,cjs}'
-  - '!{.eslintignore,.eslintrc.cjs,.prettierignore,.prettierrc.yaml,dev-app-update.yml,CHANGELOG.md,README.md}'
-  - '!{.env,.env.*,.npmrc,pnpm-lock.yaml}'
+  - '!{.editorconfig,biome.json,dev-app-update.yml,CHANGELOG.md,README.md,CODE_OF_CONDUCT.md,tsr.config.json}'
+  - '!{.env,.env.*,package-lock.json}'
   - '!{tsconfig.json,tsconfig.node.json,tsconfig.web.json}'
 asarUnpack:
   - resources/**
 win:
+  icon: build/icon.ico
   executableName: patchouli-x
 nsis:
   artifactName: ${name}-${version}-setup.${ext}
@@ -19,15 +20,17 @@ nsis:
   uninstallDisplayName: ${productName}
   createDesktopShortcut: always
 mac:
+  icon: build/icon.icns
+  category: public.app-category.productivity
   entitlementsInherit: build/entitlements.mac.plist
   extendInfo: []
   notarize: false
 dmg:
   artifactName: ${name}-${version}.${ext}
 linux:
+  icon: build/icon.png
   target:
     - AppImage
-  maintainer: patchouli.app
   category: Utility
 appImage:
   artifactName: ${name}-${version}.${ext}

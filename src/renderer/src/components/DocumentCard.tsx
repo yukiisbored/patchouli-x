@@ -2,15 +2,15 @@ import {
   Card,
   CardBody,
   CardHeader,
-  Heading,
   HStack,
+  Heading,
   Image,
   Stack,
   Text,
   VStack
 } from '@chakra-ui/react'
-import imageFallback from './fallback.svg'
 import faviconFallback from './external-link.svg'
+import imageFallback from './fallback.svg'
 
 export interface DocumentCardProps {
   url: string
@@ -26,7 +26,7 @@ export default function DocumentCard({
   description,
   image,
   favicon
-}: DocumentCardProps): JSX.Element {
+}: DocumentCardProps) {
   return (
     <Card
       role="group"
@@ -75,7 +75,9 @@ export default function DocumentCard({
             </HStack>
           </VStack>
         </CardHeader>
-        <CardBody pt="unset">{description && <Text noOfLines={3}>{description}</Text>}</CardBody>
+        <CardBody pt="unset">
+          {description && <Text noOfLines={3}>{description}</Text>}
+        </CardBody>
       </Stack>
       {image && (
         <Image
