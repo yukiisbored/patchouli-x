@@ -10,10 +10,12 @@
     "composite": true,
     "jsx": "react-jsx",
     "baseUrl": ".",
+    "moduleResolution": "Bundler",
     "paths": {
       "@/*": [
         "src/renderer/src/*"
       ]
-    }
+    },
+    "types": ["vite/client"],
   }
 }

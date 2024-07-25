@@ -1,5 +1,5 @@
 import { app, BrowserWindow, shell, utilityProcess } from 'electron'
-import { join } from 'path'
+import { join } from 'node:path'
 import { electronApp, is, optimizer } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
 import server from '../server?modulePath'
@@ -32,8 +32,8 @@ function createWindow(): void {
 
   // HMR for renderer base on electron-vite cli.
   // Load the remote URL for development or the local html file for production.
-  if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
-    mainWindow.loadURL(process.env['ELECTRON_RENDERER_URL'])
+  if (is.dev && process.env.ELECTRON_RENDERER_URL) {
+    mainWindow.loadURL(process.env.ELECTRON_RENDERER_URL)
   } else {
     mainWindow.loadFile(join(__dirname, '../renderer/index.html'))
   }
@@ -48,11 +48,13 @@ app.whenReady().then(async () => {
   })
 
   const privatePath = join(app.getPath('userData'), 'Patchouli Private')
-  const child = utilityProcess.fork(server, [privatePath], { serviceName: 'Patchouli Server' })
+  const child = utilityProcess.fork(server, [privatePath], {
+    serviceName: 'Patchouli Server'
+  })
   createRelay(child)
   createWindow()
 
-  app.on('activate', function () {
+  app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()
   })
 
