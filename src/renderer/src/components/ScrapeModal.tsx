@@ -7,14 +7,14 @@ import {
   ModalBody,
   ModalContent,
   ModalOverlay,
-  ModalProps
+  type ModalProps
 } from '@chakra-ui/react'
 import { Formik } from 'formik'
 
 export default function ScrapeModal({
   onClose,
   ...rest
-}: Omit<ModalProps, 'children'>): JSX.Element {
+}: Omit<ModalProps, 'children'>) {
   const mutation = trpc.documents.fromUrl.useMutation()
 
   async function onSubmit(url: string): Promise<void> {
@@ -27,7 +27,10 @@ export default function ScrapeModal({
       <ModalOverlay />
       <ModalContent>
         <ModalBody p="0">
-          <Formik initialValues={{ url: '' }} onSubmit={({ url }) => onSubmit(url)}>
+          <Formik
+            initialValues={{ url: '' }}
+            onSubmit={({ url }) => onSubmit(url)}
+          >
             {({ handleSubmit, handleChange, values, errors }) => (
               <form onSubmit={handleSubmit}>
                 <FormControl>
@@ -40,7 +43,9 @@ export default function ScrapeModal({
                     placeholder="Paste your link here"
                     size="lg"
                   />
-                  {errors.url && <FormErrorMessage>{errors.url}</FormErrorMessage>}
+                  {errors.url && (
+                    <FormErrorMessage>{errors.url}</FormErrorMessage>
+                  )}
                 </FormControl>
               </form>
             )}

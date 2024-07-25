@@ -1,11 +1,11 @@
-import { Database } from './db'
-import { EventEmitter } from 'stream'
-import { load, save } from './settings'
-import { mkdir } from 'fs/promises'
-import { join } from 'path'
-import { Store } from './store'
+import { mkdir } from 'node:fs/promises'
+import { join } from 'node:path'
+import { EventEmitter } from 'node:stream'
 import { TRPCError } from '@trpc/server'
-import { type Settings } from './settings'
+import { Database } from './db'
+import { load, save } from './settings'
+import type { Settings } from './settings'
+import { Store } from './store'
 
 export type Context =
   | { status: 'unconfigured'; configure: (settings: Settings) => Promise<void> }
@@ -59,7 +59,8 @@ export function unwrapCtx(ctx: Context) {
   if (ctx.status === 'unconfigured') {
     throw new TRPCError({
       code: 'FORBIDDEN',
-      message: 'Server is not configured. Please perform setup process and try again.'
+      message:
+        'Server is not configured. Please perform setup process and try again.'
     })
   }
 

@@ -1,7 +1,8 @@
 import { Readability } from '@mozilla/readability'
 import { JSDOM } from 'jsdom'
-import { type Meta } from './db'
+import invariant from 'tiny-invariant'
 import { ulid } from 'ulid'
+import type { Meta } from './db'
 
 export type ScrapeResult = Meta & { htmlContent: string }
 
@@ -21,7 +22,9 @@ function extractMeta(document: Document): Map<string, string> {
 
   for (const node of nodes) {
     const type =
-      node.getAttribute('name') ?? node.getAttribute('property') ?? node.getAttribute('itemprop')
+      node.getAttribute('name') ??
+      node.getAttribute('property') ??
+      node.getAttribute('itemprop')
     const value = node.getAttribute('content')
 
     if (type && value) {
@@ -50,9 +53,11 @@ function extractLink(document: Document): Map<string, string> {
 }
 
 function toDate(timestamp: string): Date | undefined {
-  const date = /^\d+$/.test(timestamp) ? new Date(parseInt(timestamp) * 1000) : new Date(timestamp)
+  const date = /^\d+$/.test(timestamp)
+    ? new Date(Number.parseInt(timestamp) * 1000)
+    : new Date(timestamp)
 
-  if (isNaN(date.getTime()) || date.getTime() <= 0) {
+  if (Number.isNaN(date.getTime()) || date.getTime() <= 0) {
     return undefined
   }
 
@@ -103,7 +108,8 @@ function author(meta: Map<string, string>): string | undefined {
 
 function authorUrl(meta: Map<string, string>): string | undefined {
   if (meta.has('twitter:creator')) {
-    const creator = meta.get('twitter:creator')!
+    const creator = meta.get('twitter:creator')
+    invariant(creator, 'twitter:creator should have a value')
     const username = creator.startsWith('@') ? creator.slice(1) : creator
     return `https://twitter.com/${username}`
   }
@@ -164,7 +170,13 @@ function keywords(meta: Map<string, string>): string[] {
   ]
 
   const res = new Set<string>()
-  const lists = keys.filter((key) => meta.has(key)).map((key) => meta.get(key)!)
+  const lists = keys
+    .filter((key) => meta.has(key))
+    .map((key) => {
+      const res = meta.get(key)
+      invariant(res, `${key} should have a value`)
+      return res
+    })
 
   for (const list of lists) {
     const tags = list

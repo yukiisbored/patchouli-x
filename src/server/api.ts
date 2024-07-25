@@ -1,9 +1,9 @@
-import { initTRPC, TRPCError } from '@trpc/server'
+import { TRPCError, initTRPC } from '@trpc/server'
 import { observable } from '@trpc/server/observable'
 import z from 'zod'
 
+import { type Context, unwrapCtx } from './context'
 import { scrape } from './scraper'
-import { Context, unwrapCtx } from './context'
 
 const t = initTRPC.context<Context>().create({ isServer: true })
 
@@ -38,7 +38,13 @@ export const router = t.router({
   }),
   documents: t.router({
     byPage: databaseProcedure
-      .input(z.object({ term: z.string().optional(), cursor: z.number(), pageSize: z.number() }))
+      .input(
+        z.object({
+          term: z.string().optional(),
+          cursor: z.number(),
+          pageSize: z.number()
+        })
+      )
       .query(async (req) => {
         const {
           input: { term, cursor: page, pageSize },
@@ -47,19 +53,23 @@ export const router = t.router({
           }
         } = req
 
-        return term ? searchDocuments(term, page, pageSize) : fetchDocuments(page, pageSize)
+        return term
+          ? searchDocuments(term, page, pageSize)
+          : fetchDocuments(page, pageSize)
       }),
-    fromUrl: databaseProcedure.input(z.object({ url: z.string().url() })).mutation(async (req) => {
-      const {
-        input: { url },
-        ctx: {
-          db: { insertDocumentFromScrape }
-        }
-      } = req
+    fromUrl: databaseProcedure
+      .input(z.object({ url: z.string().url() }))
+      .mutation(async (req) => {
+        const {
+          input: { url },
+          ctx: {
+            db: { insertDocumentFromScrape }
+          }
+        } = req
 
-      const res = await scrape(url)
-      await insertDocumentFromScrape(res)
-    }),
+        const res = await scrape(url)
+        await insertDocumentFromScrape(res)
+      }),
     onAdd: databaseProcedure.subscription((req) => {
       const {
         ctx: { ee }

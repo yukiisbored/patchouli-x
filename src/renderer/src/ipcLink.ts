@@ -26,16 +26,14 @@
  *
  * [electron-trpc]: https://github.com/jsonnull/electron-trpc
  */
-import { Operation, TRPCClientError, TRPCLink } from '@trpc/client'
-import { AnyRouter, inferRouterContext, ProcedureType } from '@trpc/server'
-import { observable, Observer } from '@trpc/server/observable'
-import { TRPCResponseMessage } from '@trpc/server/rpc'
+import { type Operation, TRPCClientError, type TRPCLink } from '@trpc/client'
 import { transformResult } from '@trpc/client/shared'
+import type { AnyRouter, ProcedureType, inferRouterContext } from '@trpc/server'
+import { type Observer, observable } from '@trpc/server/observable'
+import type { TRPCResponseMessage } from '@trpc/server/rpc'
 
-type IPCCallbackResult<TRouter extends AnyRouter = AnyRouter> = TRPCResponseMessage<
-  unknown,
-  inferRouterContext<TRouter>
->
+type IPCCallbackResult<TRouter extends AnyRouter = AnyRouter> =
+  TRPCResponseMessage<unknown, inferRouterContext<TRouter>>
 
 type IPCCallbacks<TRouter extends AnyRouter = AnyRouter> = Observer<
   IPCCallbackResult<TRouter>,
@@ -65,9 +63,12 @@ function IPCClient() {
     }
   }
 
-  window.electron.ipcRenderer.on('trpc', (_event, response: TRPCResponseMessage) => {
-    handle(response)
-  })
+  window.electron.ipcRenderer.on(
+    'trpc',
+    (_event, response: TRPCResponseMessage) => {
+      handle(response)
+    }
+  )
 
   function request(op: Operation, callbacks: IPCCallbacks) {
     const { type, id } = op
@@ -111,7 +112,7 @@ export function ipcLink<T extends AnyRouter>(): TRPCLink<T> {
 
         const unsubscribe = client.request(op, {
           error(err) {
-            observer.error(err as TRPCClientError<any>)
+            observer.error(err as TRPCClientError<T>)
             unsubscribe()
           },
           complete() {

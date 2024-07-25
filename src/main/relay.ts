@@ -1,12 +1,15 @@
-import { ipcMain, IpcMainEvent, UtilityProcess } from 'electron'
-import { Operation } from '@trpc/client'
+import type { Operation } from '@trpc/client'
+import { type IpcMainEvent, type UtilityProcess, ipcMain } from 'electron'
 
 export type IPCRequest =
   | { method: 'request'; operation: Operation }
   | { method: 'subscription.stop'; id: number }
 
 export function createRelay(child: UtilityProcess) {
-  const pendingRequests = new Map<number, { type: Operation['type']; event: IpcMainEvent }>()
+  const pendingRequests = new Map<
+    number,
+    { type: Operation['type']; event: IpcMainEvent }
+  >()
 
   function post(request: IPCRequest) {
     child.postMessage(request)

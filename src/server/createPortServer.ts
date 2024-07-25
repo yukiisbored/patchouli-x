@@ -1,3 +1,11 @@
+import {
+  type AnyRouter,
+  type MaybePromise,
+  TRPCError,
+  callProcedure,
+  getTRPCErrorFromUnknown,
+  type inferRouterContext
+} from '@trpc/server'
 /*
  * Forked from [electron-trpc]. Modified to work in child_process.
  *
@@ -26,18 +34,10 @@
  *
  * [electron-trpc]: https://github.com/jsonnull/electron-trpc
  */
-import { isObservable, Unsubscribable } from '@trpc/server/observable'
-import { TRPCResponseMessage } from '@trpc/server/rpc'
+import { type Unsubscribable, isObservable } from '@trpc/server/observable'
+import type { TRPCResponseMessage } from '@trpc/server/rpc'
 import { getErrorShape, transformTRPCResponse } from '@trpc/server/shared'
-import {
-  AnyRouter,
-  callProcedure,
-  getTRPCErrorFromUnknown,
-  inferRouterContext,
-  MaybePromise,
-  TRPCError
-} from '@trpc/server'
-import { IPCRequest } from '../main/relay'
+import type { IPCRequest } from '../main/relay'
 
 type CreatePortServerProps<TRouter extends AnyRouter> = {
   router: TRouter

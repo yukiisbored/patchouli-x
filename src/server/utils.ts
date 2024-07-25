@@ -12,7 +12,10 @@ export function Err<E>(error: E): Err<E> {
   return { success: false, error }
 }
 
-export function SortedArray<T>(compare: (a: T, b: T) => number, initial: T[] = []) {
+export function SortedArray<T>(
+  compare: (a: T, b: T) => number,
+  initial: T[] = []
+) {
   const arr: T[] = initial.slice().sort(compare)
 
   function get(): T[] {

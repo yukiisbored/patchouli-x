@@ -1,7 +1,7 @@
-import { mkdir, readdir, writeFile } from 'fs/promises'
-import { basename, join, resolve } from 'path'
-import { ulid } from 'ulid'
-import { ScrapeResult } from './scraper'
+import { mkdir, readdir, writeFile } from 'node:fs/promises'
+import { readFile } from 'node:fs/promises'
+import { basename, join, resolve } from 'node:path'
+import type { EventEmitter } from 'node:stream'
 import {
   create as orama,
   insert as oramaInsert,
@@ -11,13 +11,13 @@ import {
 } from '@orama/orama'
 import { documentsStore as oramaDocumentsStore } from '@orama/orama/components'
 import { stopwords as stopWords } from '@orama/stopwords/english'
-import { Settings } from './settings'
-import z from 'zod'
-import { readFile } from 'node:fs/promises'
-import { EventEmitter } from 'stream'
 import chokidar from 'chokidar'
-import { isUlid, SortedArray } from './utils'
 import { LRUCacheWithDelete } from 'mnemonist'
+import { ulid } from 'ulid'
+import z from 'zod'
+import type { ScrapeResult } from './scraper'
+import type { Settings } from './settings'
+import { SortedArray, isUlid } from './utils'
 
 const zDateTime = z
   .string()
@@ -44,6 +44,7 @@ export type Meta = z.infer<typeof metaSchema>
 
 export type Result = {
   items: Array<Meta>
+  page: number
   nextPage?: number
 }
 
@@ -146,14 +147,17 @@ export async function Database({ settings, ee }: DatabaseProps) {
     return cache.get(id) ?? readAndCache(id)
   }
 
-  async function fetchDocuments(page: number = 1, pageSize: number = 25): Promise<Result> {
+  async function fetchDocuments(page = 1, pageSize = 25): Promise<Result> {
     const start = (page - 1) * pageSize
     const end = start + pageSize
-    const items = await Promise.all(cachedDocumentIds.get().slice(start, end).map(get))
+    const items = await Promise.all(
+      cachedDocumentIds.get().slice(start, end).map(get)
+    )
 
     const nextPage = items.length === pageSize ? page + 1 : undefined
 
     return {
+      page,
       items,
       nextPage
     }
@@ -161,8 +165,8 @@ export async function Database({ settings, ee }: DatabaseProps) {
 
   async function searchDocuments(
     term: string,
-    page: number = 1,
-    pageSize: number = 25
+    page = 1,
+    pageSize = 25
   ): Promise<Result> {
     const res = await oramaSearch(documentIndex, {
       term,
@@ -175,6 +179,7 @@ export async function Database({ settings, ee }: DatabaseProps) {
     const items = await Promise.all(ids.map(get))
 
     return {
+      page,
       items,
       nextPage
     }

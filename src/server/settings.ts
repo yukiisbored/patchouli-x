@@ -1,6 +1,6 @@
 import { readFile, writeFile } from 'node:fs/promises'
 import * as z from 'zod'
-import { Err, Ok, Result } from './utils'
+import { Err, Ok, type Result } from './utils'
 
 const schema = z.object({
   version: z.literal(0),
@@ -34,7 +34,10 @@ export async function load(
   }
 }
 
-export async function save(settingsPath: string, settings: Settings): Promise<void> {
+export async function save(
+  settingsPath: string,
+  settings: Settings
+): Promise<void> {
   const data = JSON.stringify(settings, null, 2)
   await writeFile(settingsPath, data)
 }

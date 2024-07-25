@@ -1,6 +1,6 @@
-import { createPortServer } from './createPortServer'
 import { router } from './api'
 import { createContext } from './context'
+import { createPortServer } from './createPortServer'
 
 process.title = 'Patchouli Server'
 

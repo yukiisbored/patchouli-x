@@ -1,7 +1,11 @@
 import AppShell from '@/components/AppShell'
-import { ChakraProvider, extendTheme, withDefaultColorScheme } from '@chakra-ui/react'
-import { createRootRoute, Outlet } from '@tanstack/react-router'
-import { lazy, Suspense } from 'react'
+import {
+  ChakraProvider,
+  extendTheme,
+  withDefaultColorScheme
+} from '@chakra-ui/react'
+import { Outlet, createRootRoute } from '@tanstack/react-router'
+import { Suspense, lazy } from 'react'
 
 const TanStackRouterDevtools =
   process.env.NODE_ENV === 'production'

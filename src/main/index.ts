@@ -1,6 +1,6 @@
-import { app, BrowserWindow, shell, utilityProcess } from 'electron'
 import { join } from 'node:path'
 import { electronApp, is, optimizer } from '@electron-toolkit/utils'
+import { BrowserWindow, app, shell, utilityProcess } from 'electron'
 import icon from '../../resources/icon.png?asset'
 import server from '../server?modulePath'
 import { createRelay } from './relay'
