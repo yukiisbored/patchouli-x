@@ -81,7 +81,6 @@ function Index() {
               borderColor="white"
               placeholder="What's on your mind?"
               autoFocus
-              disabled={data === undefined}
             />
           </FormControl>
         </CardBody>

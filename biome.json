@@ -8,7 +8,9 @@
       ".gitignore",
       "tsconfig.json",
       "tsconfig.*.json",
-      "routeTree.gen.ts"
+      "routeTree.gen.ts",
+      "target/**",
+      "private/**"
     ]
   },
   "formatter": {

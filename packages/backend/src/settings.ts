@@ -2,19 +2,19 @@ import { readFile, writeFile } from 'node:fs/promises'
 import * as z from 'zod'
 import { Err, Ok, type Result } from './utils.ts'
 
-const schema = z.object({
+export const settingsSchema = z.object({
   version: z.literal(0),
   dataPath: z.string()
 })
 
-export type Settings = z.infer<typeof schema>
+export type Settings = z.infer<typeof settingsSchema>
 
 export async function load(
   settingsPath: string
 ): Promise<Result<Settings, 'ParseFail' | 'NoFile' | 'Unknown'>> {
   try {
     const data = await readFile(settingsPath, 'utf-8')
-    const res = await schema.safeParseAsync(JSON.parse(data))
+    const res = await settingsSchema.safeParseAsync(JSON.parse(data))
 
     if (!res.success) {
       console.log('failed to parse settings file', res.error)

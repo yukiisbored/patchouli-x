@@ -2,6 +2,7 @@ import { TRPCError, initTRPC } from '@trpc/server'
 import { observable } from '@trpc/server/observable'
 import z from 'zod'
 
+import { settingsSchema } from 'settings.ts'
 import { type Context, unwrapCtx } from './context.ts'
 import { scrape } from './scraper.ts'
 
@@ -22,11 +23,13 @@ const databaseProcedure = t.procedure.use(async (opts) => {
 
 export const router = t.router({
   system: t.router({
-    configure: t.procedure.mutation(async () => {
-      throw new TRPCError({
-        code: 'NOT_IMPLEMENTED',
-        message: 'Not implemented yet, sorry.'
-      })
+    configure: t.procedure.input(settingsSchema).mutation(async (req) => {
+      const {
+        ctx: { configure },
+        input
+      } = req
+
+      await configure(input)
     }),
     status: t.procedure.query(async (req) => {
       const {

@@ -1,6 +1,7 @@
 import { trpc } from '@/trpc'
 import { Button, Flex, Heading, Spacer, Stack, Text } from '@chakra-ui/react'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
+import { message, open } from '@tauri-apps/api/dialog'
 
 export const Route = createFileRoute('/setup')({
   component: Setup
@@ -11,7 +12,23 @@ function Setup() {
   const mutation = trpc.system.configure.useMutation()
 
   async function onClick() {
-    await mutation.mutateAsync()
+    const selected = await open({
+      directory: true,
+      multiple: false
+    })
+
+    if (Array.isArray(selected) || !selected) {
+      await message('Please select a directory for your vault.', {
+        type: 'error'
+      })
+      return
+    }
+
+    await mutation.mutateAsync({
+      version: 0,
+      dataPath: selected
+    })
+
     await navigate({
       to: '/'
     })

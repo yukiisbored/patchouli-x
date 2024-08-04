@@ -3,6 +3,10 @@
   "name": "@patchouli-app/backend",
   "module": "src/index.ts",
   "type": "module",
+  "scripts": {
+    "dev": "bun run --watch src/index.ts -- --privatePath=./private",
+    "check-types": "tsc --noEmit"
+  },
   "devDependencies": {
     "@types/bun": "^1.1.6",
     "@types/cors": "^2.8.17",

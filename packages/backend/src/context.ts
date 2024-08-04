@@ -37,6 +37,8 @@ export async function createContext(privatePath: string) {
       const ee = ctx.status === 'configured' ? ctx.ee : new EventEmitter()
       const db = Database({ settings, ee })
 
+      console.log('Patchouli configured:', settings)
+
       store.set({
         status: 'configured',
         db,

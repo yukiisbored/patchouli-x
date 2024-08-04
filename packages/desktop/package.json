@@ -1,21 +1,24 @@
 {
   "private": true,
-  "name": "@patchouli-app/frontend",
+  "name": "@patchouli-app/desktop",
   "type": "module",
   "scripts": {
-    "dev": "bunx --bun vite",
-    "build": "tsc -b && bunx --bun vite build"
+    "dev": "tauri dev",
+    "dev:vite": "bunx --bun vite",
+    "build:vite": "bunx --bun vite build",
+    "check-types": "tsc --noEmit"
   },
   "dependencies": {
     "@chakra-ui/react": "^2.8.2",
     "@emotion/react": "^11.13.0",
     "@emotion/styled": "^11.13.0",
+    "@patchouli-app/backend": "workspace:*",
     "@tabler/icons-react": "^3.11.0",
     "@tanstack/react-query": "4/",
     "@tanstack/react-router": "^1.46.4",
+    "@tauri-apps/api": "^1.6.0",
     "@trpc/client": "^10.45.2",
     "@trpc/react-query": "^10.45.2",
-    "@patchouli-app/backend": "workspace:*",
     "formik": "^2.4.6",
     "framer-motion": "^11.3.21",
     "react": "^18.3.1",
@@ -24,14 +27,10 @@
   "devDependencies": {
     "@tanstack/router-devtools": "^1.46.4",
     "@tanstack/router-vite-plugin": "^1.45.13",
+    "@tauri-apps/cli": "^1.6.0",
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",
-    "@typescript-eslint/eslint-plugin": "^7.15.0",
-    "@typescript-eslint/parser": "^7.15.0",
     "@vitejs/plugin-react": "^4.3.1",
-    "eslint": "^8.57.0",
-    "eslint-plugin-react-hooks": "^4.6.2",
-    "eslint-plugin-react-refresh": "^0.4.7",
     "typescript": "^5.2.2",
     "vite": "^5.3.4"
   }
