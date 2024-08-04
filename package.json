@@ -15,5 +15,8 @@
   "packageManager": "bun@1.1.21",
   "peerDependencies": {
     "typescript": "^5.0.0"
+  },
+  "patchedDependencies": {
+    "jsdom@24.1.1": "patches/jsdom@24.1.1.patch"
   }
 }
