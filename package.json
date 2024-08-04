@@ -4,6 +4,7 @@
   "workspaces": ["packages/*"],
   "scripts": {
     "dev": "turbo dev",
+    "build": "turbo build",
     "lint": "biome check",
     "lint:fix": "biome check --fix"
   },

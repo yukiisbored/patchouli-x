@@ -21,3 +21,7 @@ export function useEnsureConfigured() {
     checkStatus().catch(console.error)
   }, [navigate, utils])
 }
+
+export function isDev() {
+  return import.meta.env.DEV
+}

@@ -5,7 +5,10 @@
   "scripts": {
     "dev": "tauri dev",
     "dev:vite": "bunx --bun vite",
-    "build:vite": "bunx --bun vite build",
+    "build": "tauri build",
+    "before-build": "bun run before-build:backend && bun run before-build:vite",
+    "before-build:backend": "bun run scripts/move-binary.ts",
+    "before-build:vite": "bunx --bun vite build",
     "check-types": "tsc --noEmit"
   },
   "dependencies": {
@@ -22,12 +25,14 @@
     "formik": "^2.4.6",
     "framer-motion": "^11.3.21",
     "react": "^18.3.1",
-    "react-dom": "^18.3.1"
+    "react-dom": "^18.3.1",
+    "tauri-plugin-log-api": "https://github.com/tauri-apps/tauri-plugin-log"
   },
   "devDependencies": {
     "@tanstack/router-devtools": "^1.46.4",
     "@tanstack/router-vite-plugin": "^1.45.13",
     "@tauri-apps/cli": "^1.6.0",
+    "@types/bun": "^1.1.6",
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",
     "@vitejs/plugin-react": "^4.3.1",

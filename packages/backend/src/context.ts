@@ -3,6 +3,7 @@ import { join } from 'node:path'
 import { EventEmitter } from 'node:stream'
 import { TRPCError } from '@trpc/server'
 import { Database } from './db.ts'
+import { logger } from './logger.ts'
 import { load, save } from './settings.ts'
 import type { Settings } from './settings.ts'
 import { Store } from './store.ts'
@@ -37,7 +38,7 @@ export async function createContext(privatePath: string) {
       const ee = ctx.status === 'configured' ? ctx.ee : new EventEmitter()
       const db = Database({ settings, ee })
 
-      console.log('Patchouli configured:', settings)
+      logger.info('Patchouli configured:', settings)
 
       store.set({
         status: 'configured',

@@ -1,14 +1,14 @@
 {
   "$schema": "../../../node_modules/@tauri-apps/cli/schema.json",
   "build": {
-    "beforeBuildCommand": "bun run build:vite",
+    "beforeBuildCommand": "bun run before-build",
     "beforeDevCommand": "bun run dev:vite",
     "devPath": "http://localhost:5173",
     "distDir": "../dist"
   },
   "package": {
-    "productName": "patchouli-x",
-    "version": "0.1.0"
+    "productName": "Patchouli",
+    "version": "24.8.0"
   },
   "tauri": {
     "allowlist": {
@@ -28,18 +28,24 @@
         "all": false,
         "execute": false,
         "open": true,
-        "scope": [],
-        "sidecar": false
+        "sidecar": true,
+        "scope": [
+          {
+            "name": "binaries/patchouli-backend",
+            "args": ["--privatePath", { "validator": "\\S+" }],
+            "sidecar": true
+          }
+        ]
       }
     },
     "bundle": {
       "active": true,
-      "category": "DeveloperTool",
-      "copyright": "",
+      "category": "Productivity",
+      "copyright": "Copyright (c) 2024 Yuki Langley and Patchouli Contributors",
       "deb": {
         "depends": []
       },
-      "externalBin": [],
+      "externalBin": ["binaries/patchouli-backend"],
       "icon": [
         "icons/32x32.png",
         "icons/128x128.png",
@@ -47,8 +53,8 @@
         "icons/icon.icns",
         "icons/icon.ico"
       ],
-      "identifier": "com.tauri.dev",
-      "longDescription": "",
+      "identifier": "app.patchouli.patchouli-x",
+      "longDescription": "Search your darlings",
       "macOS": {
         "entitlements": null,
         "exceptionDomain": "",
@@ -57,7 +63,7 @@
         "signingIdentity": null
       },
       "resources": [],
-      "shortDescription": "",
+      "shortDescription": "Search your darlings",
       "targets": "all",
       "windows": {
         "certificateThumbprint": null,
@@ -66,7 +72,9 @@
       }
     },
     "security": {
-      "csp": null
+      "csp": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https: http:",
+      "devCsp": null,
+      "dangerousDisableAssetCspModification": ["style-src"]
     },
     "updater": {
       "active": false

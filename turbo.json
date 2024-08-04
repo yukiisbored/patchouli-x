@@ -4,9 +4,17 @@
     "check-types": {
       "dependsOn": ["^check-types"]
     },
+    "build": {
+      "dependsOn": ["^build"],
+      "outputs": ["dist/**"]
+    },
     "dev": {
       "persistent": true,
       "cache": false
+    },
+    "@patchouli-app/desktop": {
+      "dependsOn": ["@patchouli-app/backend#build", "check-types", "build"],
+      "outputs": ["dist/**", "src-tauri/target/**", "src-tauri/binaries/**"]
     }
   }
 }

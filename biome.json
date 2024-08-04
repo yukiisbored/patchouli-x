@@ -10,7 +10,8 @@
       "tsconfig.*.json",
       "routeTree.gen.ts",
       "target/**",
-      "private/**"
+      "private/**",
+      ".turbo/**"
     ]
   },
   "formatter": {

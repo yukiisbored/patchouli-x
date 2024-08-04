@@ -15,6 +15,7 @@ import chokidar from 'chokidar'
 import { LRUCacheWithDelete } from 'mnemonist'
 import { ulid } from 'ulid'
 import z from 'zod'
+import { logger } from './logger.ts'
 import type { ScrapeResult } from './scraper.ts'
 import type { Settings } from './settings.ts'
 import { SortedArray, isUlid } from './utils.ts'
@@ -231,7 +232,7 @@ export async function Database({ settings, ee }: DatabaseProps) {
       return
     }
 
-    console.log('Adding document', id)
+    logger.info('Adding document: %s', id)
     const document = await read(id)
 
     insert(id, document)
@@ -245,20 +246,20 @@ export async function Database({ settings, ee }: DatabaseProps) {
       return
     }
 
-    console.log('Removing document', id)
+    logger.info('Removing document: %s', id)
     await remove(id)
     ee.emit('document:remove', id)
   })
 
   watcher.on('change', async (path) => {
     const id = basename(resolve(path, '..'))
-    console.log('Change detected', id)
+    logger.info('Change detected: %s', id)
 
     if (!isUlid(id)) {
       return
     }
 
-    console.log('Updating document', id)
+    logger.info('Updating document: %s', id)
     const document = await read(id)
     await update(id, document)
     ee.emit('document:update', id)

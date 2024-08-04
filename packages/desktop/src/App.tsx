@@ -7,7 +7,9 @@ import {
 } from '@tanstack/react-router'
 import { useState } from 'react'
 
+import { pipeLink } from '@/pipeLink.ts'
 import { routeTree } from '@/routeTree.gen'
+import { isDev } from '@/utils.ts'
 import { httpBatchLink } from '@trpc/client'
 
 const history = createHashHistory()
@@ -23,11 +25,13 @@ export default function App() {
   const [queryClient] = useState(() => new QueryClient())
   const [trpcClient] = useState(() =>
     trpc.createClient({
-      links: [
-        httpBatchLink({
-          url: 'http://localhost:2022'
-        })
-      ]
+      links: isDev()
+        ? [
+            httpBatchLink({
+              url: 'http://localhost:2022'
+            })
+          ]
+        : [pipeLink()]
     })
   )
 
