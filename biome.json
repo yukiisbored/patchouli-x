@@ -6,8 +6,6 @@
       "dist/**",
       "out/**",
       ".gitignore",
-      "package-lock.json",
-      "LICENSE.md",
       "tsconfig.json",
       "tsconfig.*.json",
       "routeTree.gen.ts"
