@@ -176,3 +176,7 @@ dist
 
 # Turbo
 .turbo
+
+# Devbox
+.devbox
+.rustup
