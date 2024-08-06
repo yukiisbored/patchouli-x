@@ -12,8 +12,8 @@
       "persistent": true,
       "cache": false
     },
-    "@patchouli-app/desktop": {
-      "dependsOn": ["@patchouli-app/backend#build", "check-types", "build"],
+    "@patchouli-app/desktop#build": {
+      "dependsOn": ["@patchouli-app/backend#build", "check-types"],
       "outputs": ["dist/**", "src-tauri/target/**", "src-tauri/binaries/**"]
     }
   }
