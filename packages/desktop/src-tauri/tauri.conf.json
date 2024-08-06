@@ -63,8 +63,8 @@
         "signingIdentity": null
       },
       "resources": [],
-      "shortDescription": "Search your darlings",
-      "targets": "all",
+      "shortDescription": "Patchouli",
+      "targets": ["deb", "rpm", "dmg", "nsis"],
       "windows": {
         "certificateThumbprint": null,
         "digestAlgorithm": "sha256",
@@ -84,7 +84,7 @@
         "fullscreen": false,
         "height": 900,
         "resizable": true,
-        "title": "Patchouli X",
+        "title": "Patchouli",
         "width": 900
       }
     ]
