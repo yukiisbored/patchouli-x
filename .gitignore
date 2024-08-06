@@ -180,3 +180,4 @@ dist
 # Devbox
 .devbox
 .rustup
+.fnm

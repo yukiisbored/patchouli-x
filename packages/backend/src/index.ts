@@ -13,7 +13,7 @@ process.title = 'Patchouli Server'
 const {
   values: { privatePath: privatePathRelative, dev }
 } = parseArgs({
-  args: Bun.argv,
+  args: process.argv,
   options: {
     privatePath: {
       type: 'string'
