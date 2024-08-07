@@ -6,11 +6,12 @@
       "dist/**",
       "out/**",
       ".gitignore",
-      "package-lock.json",
-      "LICENSE.md",
       "tsconfig.json",
       "tsconfig.*.json",
-      "routeTree.gen.ts"
+      "routeTree.gen.ts",
+      "target/**",
+      "private/**",
+      ".turbo/**"
     ]
   },
   "formatter": {

@@ -15,13 +15,6 @@ Patchouli aims to be your personal search engine for all the things you know and
 Patchouli is built for people who are born in the post-Google era.
 We search for things, not organize them in complicated hierarchical structures.
 
-## Hack Patchouli
-
-```shell-session
-$ npm install
-$ npm run dev
-```
-
 ## FAQ
 
 This section is from the perspective of the original author, Yuki.
