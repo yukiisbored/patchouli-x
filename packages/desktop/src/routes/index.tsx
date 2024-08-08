@@ -4,8 +4,8 @@ import {
   Button,
   Card,
   CardBody,
-  Center,
   FormControl,
+  HStack,
   Input,
   Kbd,
   Link,
@@ -209,9 +209,17 @@ function Index() {
           )}
         </VStack>
       ) : (
-        <Center flexGrow={1}>
-          <Spinner />
-        </Center>
+        <VStack mt={16}>
+          <HStack gap={4}>
+            <Spinner
+              size="xl"
+              emptyColor="gray.200"
+              color="brand.500"
+              thickness="3px"
+            />
+            <Text fontSize="4xl">Getting things ready</Text>
+          </HStack>
+        </VStack>
       )}
     </VStack>
   )
