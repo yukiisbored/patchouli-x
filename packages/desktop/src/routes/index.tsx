@@ -19,7 +19,13 @@ import {
 } from '@chakra-ui/react'
 import { IconMoodSad2, IconMoodWink } from '@tabler/icons-react'
 import { createFileRoute } from '@tanstack/react-router'
-import { Fragment, useCallback, useDeferredValue, useState } from 'react'
+import {
+  Fragment,
+  useCallback,
+  useDeferredValue,
+  useEffect,
+  useState
+} from 'react'
 import { isUrl as isUrlFn, useEnsureConfigured } from '../utils'
 
 export const Route = createFileRoute('/')({
@@ -31,7 +37,7 @@ function Index() {
 
   const toast = useToast()
   const utils = trpc.useUtils()
-  const [term, setTerm] = useState('')
+  const [term, setTerm] = useState(window.localStorage.getItem('term') ?? '')
   const deferredTerm = useDeferredValue(term)
   const isUrl = isUrlFn(deferredTerm)
   const isStale = deferredTerm !== term
@@ -86,6 +92,10 @@ function Index() {
       utils.documents.invalidate()
     }
   })
+
+  useEffect(() => {
+    window.localStorage.setItem('term', term)
+  }, [term])
 
   return (
     <VStack align="stretch" gap={0}>
