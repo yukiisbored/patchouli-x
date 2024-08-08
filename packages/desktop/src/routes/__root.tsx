@@ -62,8 +62,8 @@ export const Route = createRootRoute({
           position="bottom-right"
           toggleButtonProps={{
             style: {
-              bottom: '36px',
-              right: '2px'
+              bottom: '4px',
+              right: '12px'
             }
           }}
         />

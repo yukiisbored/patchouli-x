@@ -36,9 +36,15 @@ export default function DocumentCard({
       target="_blank"
       direction="row"
       overflow="hidden"
+      flexShrink={0}
+      w={{
+        base: '100%',
+        md: '48em'
+      }}
+      h={180}
     >
       <Stack flexGrow={1}>
-        <CardHeader>
+        <CardHeader pb="unset">
           <VStack align="start" spacing={1}>
             {title && (
               <Heading
@@ -79,16 +85,18 @@ export default function DocumentCard({
           {description && <Text noOfLines={3}>{description}</Text>}
         </CardBody>
       </Stack>
-      {image && (
-        <Image
-          objectFit="cover"
-          w="200px"
-          flexShrink={0}
-          src={image}
-          alt={title ?? url}
-          fallbackSrc={imageFallback}
-        />
-      )}
+      <Image
+        objectFit="cover"
+        w="200px"
+        flexShrink={0}
+        src={image ?? imageFallback}
+        alt={title ?? url}
+        fallbackSrc={imageFallback}
+        display={{
+          base: 'none',
+          sm: 'initial'
+        }}
+      />
     </Card>
   )
 }
