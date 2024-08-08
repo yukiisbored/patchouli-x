@@ -39,7 +39,8 @@ function Index() {
       },
       {
         getNextPageParam: (page) => page.nextPage,
-        initialCursor: 1
+        initialCursor: 1,
+        keepPreviousData: true
       }
     )
 
