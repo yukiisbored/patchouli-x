@@ -75,6 +75,7 @@ export default function DocumentCard({
                 }}
                 textOverflow="ellipsis"
                 noOfLines={1}
+                maxW="500px"
               >
                 {url}
               </Text>
