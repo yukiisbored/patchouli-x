@@ -12,9 +12,14 @@ import {
   Input,
   Spinner,
   VStack,
-  useDisclosure
+  useDisclosure,
+  Text,
+  Stack,
+  UnorderedList,
+  ListItem,
+  Link
 } from '@chakra-ui/react'
-import { IconPlus } from '@tabler/icons-react'
+import { IconMoodSad2, IconPlus } from '@tabler/icons-react'
 import { createFileRoute } from '@tanstack/react-router'
 import { Fragment, useDeferredValue, useState } from 'react'
 import { useEnsureConfigured } from '../utils'
@@ -105,16 +110,43 @@ function Index() {
             </Fragment>
           ))}
 
-          <Button
-            onClick={() => fetchNextPage()}
-            disabled={!hasNextPage || isFetchingNextPage}
-          >
-            {isFetchingNextPage
-              ? 'Loading more...'
-              : hasNextPage
-                ? 'Load more'
-                : 'Nothing more'}
-          </Button>
+          {!data.pages.reduce((acc, { items }) => acc + items.length, 0) ? (
+            <Stack align="center" mt={16}>
+              <IconMoodSad2 size={128} />
+              <Text fontSize="4xl" fontWeight="bold">
+                No results found
+              </Text>
+              <Text>It might be time to explore the Internet</Text>
+              <UnorderedList mt={4} maxW={400}>
+                <ListItem>
+                  Try refining your search term or using different keywords. It
+                  might be here somewhere.
+                </ListItem>
+                <ListItem>
+                  Try searching what you're looking for with your favorite
+                  search engine.
+                </ListItem>
+                <ListItem>
+                  Need inspiration? Check out{' '}
+                  <Link href="https://kagi.com/smallweb" textColor="brand.500">
+                    Kagi Small Web
+                  </Link>
+                  .
+                </ListItem>
+              </UnorderedList>
+            </Stack>
+          ) : (
+            <Button
+              onClick={() => fetchNextPage()}
+              disabled={!hasNextPage || isFetchingNextPage}
+            >
+              {isFetchingNextPage
+                ? 'Loading more...'
+                : hasNextPage
+                  ? 'Load more'
+                  : 'Nothing more'}
+            </Button>
+          )}
         </VStack>
       ) : (
         <Center flexGrow={1}>
