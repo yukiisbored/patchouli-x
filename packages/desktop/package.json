@@ -22,6 +22,7 @@
     "@tauri-apps/api": "^1.6.0",
     "@trpc/client": "^10.45.2",
     "@trpc/react-query": "^10.45.2",
+    "chakra-ui-contextmenu": "^1.0.5",
     "formik": "^2.4.6",
     "framer-motion": "^11.3.21",
     "react": "^18.3.1",

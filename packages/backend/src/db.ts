@@ -1,5 +1,5 @@
 import { mkdir, readdir, writeFile } from 'node:fs/promises'
-import { readFile } from 'node:fs/promises'
+import { readFile, stat } from 'node:fs/promises'
 import { basename, join, resolve } from 'node:path'
 import type { EventEmitter } from 'node:stream'
 import {
@@ -133,9 +133,18 @@ export async function Database({ settings, ee }: DatabaseProps) {
   async function read(id: string) {
     const documentPath = join(dataPath, id)
     const metaPath = join(documentPath, 'meta.json')
+    const indexPath = join(documentPath, 'index.html')
+    const indexExists = await stat(indexPath).then(
+      () => true,
+      () => false
+    )
     const metaRaw = await readFile(metaPath, 'utf-8')
+    const meta = await metaSchema.parseAsync(JSON.parse(metaRaw))
 
-    return metaSchema.parseAsync(JSON.parse(metaRaw))
+    return {
+      ...meta,
+      index: indexExists ? indexPath : undefined
+    }
   }
 
   async function get(id: string): Promise<Meta> {

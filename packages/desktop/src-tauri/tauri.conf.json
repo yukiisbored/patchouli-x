@@ -30,7 +30,7 @@
       "shell": {
         "all": false,
         "execute": false,
-        "open": true,
+        "open": "^((https?://\\w+).+|(file://\\w+).+(/|\\\\)index\\.html)$",
         "sidecar": true,
         "scope": [
           {
