@@ -73,6 +73,18 @@ export const router = t.router({
         const res = await scrape(url)
         await insertDocumentFromScrape(res)
       }),
+    delete: databaseProcedure
+      .input(z.object({ id: z.string() }))
+      .mutation(async (req) => {
+        const {
+          input: { id },
+          ctx: {
+            db: { deleteDocument }
+          }
+        } = req
+
+        await deleteDocument(id)
+      }),
     onAdd: databaseProcedure.subscription((req) => {
       const {
         ctx: { ee }

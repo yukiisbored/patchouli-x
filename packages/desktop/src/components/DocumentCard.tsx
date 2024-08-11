@@ -10,7 +10,8 @@ import {
   MenuList,
   Stack,
   Text,
-  VStack
+  VStack,
+  useToast
 } from '@chakra-ui/react'
 import faviconFallback from './external-link.svg'
 import imageFallback from './fallback.svg'
@@ -22,8 +23,12 @@ import {
   IconTrash
 } from '@tabler/icons-react'
 import { open } from '@tauri-apps/api/shell'
+import { trpc } from '@/trpc'
+import { useCallback } from 'react'
+import { getErrorMessage } from '@/utils'
 
 export interface DocumentCardProps {
+  id: string
   url: string
   title?: string | null
   description?: string | null
@@ -33,6 +38,7 @@ export interface DocumentCardProps {
 }
 
 export default function DocumentCard({
+  id,
   url,
   title,
   description,
@@ -40,6 +46,26 @@ export default function DocumentCard({
   favicon,
   index
 }: DocumentCardProps) {
+  const toast = useToast()
+  const deleteMutation = trpc.documents.delete.useMutation()
+
+  const handleDelete = useCallback(async () => {
+    try {
+      await deleteMutation.mutateAsync({ id })
+      toast({
+        title: 'Document moved to trash',
+        description: `"${title ?? url}" has been moved to trash.`,
+        status: 'success'
+      })
+    } catch (error) {
+      toast({
+        title: 'Failed to delete document',
+        description: getErrorMessage(error),
+        status: 'error'
+      })
+    }
+  }, [id, deleteMutation, toast, title, url])
+
   return (
     <ContextMenu<HTMLAnchorElement>
       renderMenu={() => (
@@ -75,6 +101,7 @@ export default function DocumentCard({
             color="red.500"
             icon={<IconTrash size={18} />}
             iconSpacing={2}
+            onClick={() => handleDelete()}
           >
             Delete
           </MenuItem>

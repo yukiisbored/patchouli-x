@@ -1,5 +1,5 @@
 import { mkdir, readdir, writeFile } from 'node:fs/promises'
-import { readFile, stat } from 'node:fs/promises'
+import { readFile, stat, rename } from 'node:fs/promises'
 import { basename, join, resolve } from 'node:path'
 import type { EventEmitter } from 'node:stream'
 import {
@@ -58,6 +58,8 @@ export type Database = ReturnType<typeof Database>
 
 export async function Database({ settings, ee }: DatabaseProps) {
   const { dataPath } = settings
+  const trashPath = join(dataPath, 'Trash')
+
   const store = await oramaDocumentsStore.createDocumentsStore()
   const documentIndex = await orama({
     schema: {
@@ -221,7 +223,14 @@ export async function Database({ settings, ee }: DatabaseProps) {
     return meta
   }
 
+  async function deleteDocument(id: string) {
+    const documentPath = join(dataPath, id)
+    const trashDocumentPath = join(trashPath, id)
+    await rename(documentPath, trashDocumentPath)
+  }
+
   await mkdir(dataPath, { recursive: true })
+  await mkdir(trashPath, { recursive: true })
 
   await Promise.allSettled(
     (await readdir(dataPath, { withFileTypes: true }))
@@ -279,6 +288,7 @@ export async function Database({ settings, ee }: DatabaseProps) {
     fetchDocuments,
     insertDocumentFromScrape,
     searchDocuments,
+    deleteDocument,
     close
   }
 }
