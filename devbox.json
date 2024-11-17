@@ -1,6 +1,11 @@
 {
   "$schema": "https://raw.githubusercontent.com/jetify-com/devbox/0.11.0/.schema/devbox.schema.json",
-  "packages": ["bun@latest", "rustup@latest", "libiconv@latest", "fnm@latest"],
+  "packages": [
+    "rustup@latest",
+    "libiconv@latest",
+    "fnm@latest",
+    "pnpm@latest"
+  ],
   "shell": {
     "init_hook": [
       "rustupHomeDir=\"$DEVBOX_PROJECT_ROOT\"/.rustup",

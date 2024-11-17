@@ -1,4 +1,0 @@
-{
-  "main": "patchouli-backend.cjs",
-  "output": "patchouli-backend.blob"
-}

@@ -4,11 +4,8 @@
   "type": "module",
   "scripts": {
     "dev": "tauri dev",
-    "dev:vite": "bunx --bun vite",
+    "dev:vite": "vite",
     "build": "tauri build",
-    "before-build": "bun run before-build:backend && bun run before-build:vite",
-    "before-build:backend": "bun run scripts/move-binary.ts",
-    "before-build:vite": "bunx --bun vite build",
     "check-types": "tsc --noEmit"
   },
   "dependencies": {
@@ -17,10 +14,11 @@
     "@emotion/styled": "^11.13.0",
     "@patchouli-app/backend": "workspace:*",
     "@tabler/icons-react": "^3.11.0",
-    "@tanstack/react-query": "4/",
+    "@tanstack/react-query": "^4",
     "@tanstack/react-router": "^1.46.4",
     "@tauri-apps/api": "^1.6.0",
     "@trpc/client": "^10.45.2",
+    "@trpc/server": "^10.45.2",
     "@trpc/react-query": "^10.45.2",
     "formik": "^2.4.6",
     "framer-motion": "^11.3.21",
@@ -32,7 +30,6 @@
     "@tanstack/router-devtools": "^1.46.4",
     "@tanstack/router-vite-plugin": "^1.45.13",
     "@tauri-apps/cli": "^1.6.0",
-    "@types/bun": "^1.1.6",
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",
     "@vitejs/plugin-react": "^4.3.1",
