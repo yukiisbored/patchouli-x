@@ -31,7 +31,7 @@ import { transformResult } from '@trpc/client/shared'
 import type { AnyRouter, ProcedureType, inferRouterContext } from '@trpc/server'
 import { type Observer, observable } from '@trpc/server/observable'
 import type { TRPCResponseMessage } from '@trpc/server/rpc'
-import { error } from 'tauri-plugin-log-api'
+import { error } from '@tauri-apps/plugin-log'
 
 type PipeCallbackResult<TRouter extends AnyRouter = AnyRouter> =
   TRPCResponseMessage<unknown, inferRouterContext<TRouter>>

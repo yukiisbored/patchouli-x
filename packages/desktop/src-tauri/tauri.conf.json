@@ -2,90 +2,63 @@
   "$schema": "../../../node_modules/@tauri-apps/cli/schema.json",
   "build": {
     "beforeDevCommand": "pnpm dev:vite",
-    "devPath": "http://localhost:5173",
-    "distDir": "../dist"
+    "frontendDist": "../dist",
+    "devUrl": "http://localhost:5173"
   },
-  "package": {
-    "productName": "Patchouli",
-    "version": "24.8.0"
-  },
-  "tauri": {
-    "allowlist": {
-      "all": false,
-      "path": {
-        "all": true
-      },
-      "dialog": {
-        "all": false,
-        "ask": false,
-        "confirm": false,
-        "message": true,
-        "open": true,
-        "save": false
-      },
-      "shell": {
-        "all": false,
-        "execute": false,
-        "open": true,
-        "sidecar": true,
-        "scope": [
-          {
-            "name": "binaries/patchouli-backend",
-            "args": ["--privatePath", { "validator": "\\S+" }],
-            "sidecar": true
-          }
-        ]
-      }
+  "bundle": {
+    "active": true,
+    "category": "Productivity",
+    "copyright": "Copyright (c) 2024 Yuki Langley and Patchouli Contributors",
+    "targets": ["deb", "rpm", "dmg", "nsis"],
+    "externalBin": [],
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "windows": {
+      "certificateThumbprint": null,
+      "digestAlgorithm": "sha256",
+      "timestampUrl": ""
     },
-    "bundle": {
-      "active": true,
-      "category": "Productivity",
-      "copyright": "Copyright (c) 2024 Yuki Langley and Patchouli Contributors",
+    "longDescription": "Search your darlings",
+    "macOS": {
+      "entitlements": null,
+      "exceptionDomain": "",
+      "frameworks": [],
+      "providerShortName": null,
+      "signingIdentity": null
+    },
+    "resources": [],
+    "shortDescription": "Patchouli",
+    "linux": {
       "deb": {
         "depends": []
-      },
-      "externalBin": ["binaries/patchouli-backend"],
-      "icon": [
-        "icons/32x32.png",
-        "icons/128x128.png",
-        "icons/128x128@2x.png",
-        "icons/icon.icns",
-        "icons/icon.ico"
-      ],
-      "identifier": "app.patchouli.patchouli-x",
-      "longDescription": "Search your darlings",
-      "macOS": {
-        "entitlements": null,
-        "exceptionDomain": "",
-        "frameworks": [],
-        "providerShortName": null,
-        "signingIdentity": null
-      },
-      "resources": [],
-      "shortDescription": "Patchouli",
-      "targets": ["deb", "rpm", "dmg", "nsis"],
-      "windows": {
-        "certificateThumbprint": null,
-        "digestAlgorithm": "sha256",
-        "timestampUrl": ""
       }
-    },
-    "security": {
-      "csp": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https: http:",
-      "devCsp": null,
-      "dangerousDisableAssetCspModification": ["style-src"]
-    },
-    "updater": {
-      "active": false
-    },
+    }
+  },
+  "productName": "Patchouli",
+  "mainBinaryName": "Patchouli",
+  "version": "24.8.0",
+  "identifier": "app.patchouli.patchouli-x",
+  "plugins": {},
+  "app": {
     "windows": [
       {
         "fullscreen": false,
         "height": 900,
         "resizable": true,
         "title": "Patchouli",
-        "width": 900
+        "width": 900,
+        "useHttpsScheme": true
       }
-    ]
+    ],
+    "security": {
+      "dangerousDisableAssetCspModification": ["style-src"],
+      "devCsp": null,
+      "csp": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https: http:; connect-src ipc: http://ipc.localhost"
+    }
   }
 }

@@ -181,3 +181,6 @@ dist
 .devbox
 .rustup
 .fnm
+
+# Rust
+target

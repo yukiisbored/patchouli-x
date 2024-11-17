@@ -1,7 +1,7 @@
 import { trpc } from '@/trpc'
 import { Button, Flex, Heading, Spacer, Stack, Text } from '@chakra-ui/react'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
-import { message, open } from '@tauri-apps/api/dialog'
+import { message, open } from '@tauri-apps/plugin-dialog'
 
 export const Route = createFileRoute('/setup')({
   component: Setup

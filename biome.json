@@ -11,7 +11,8 @@
       "routeTree.gen.ts",
       "target/**",
       "private/**",
-      ".turbo/**"
+      ".turbo/**",
+      "packages/desktop/src-tauri/gen/**"
     ]
   },
   "formatter": {
