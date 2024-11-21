@@ -2,15 +2,6 @@ import { mkdir, readdir, writeFile } from 'node:fs/promises'
 import { readFile } from 'node:fs/promises'
 import { basename, join, resolve } from 'node:path'
 import type { EventEmitter } from 'node:stream'
-import {
-  create as orama,
-  insert as oramaInsert,
-  remove as oramaRemove,
-  search as oramaSearch,
-  update as oramaUpdate
-} from '@orama/orama'
-import { documentsStore as oramaDocumentsStore } from '@orama/orama/components'
-import { stopwords as stopWords } from '@orama/stopwords/english'
 import chokidar from 'chokidar'
 import { LRUCacheWithDelete } from 'mnemonist'
 import { ulid } from 'ulid'
@@ -19,6 +10,7 @@ import { logger } from './logger.ts'
 import type { ScrapeResult } from './scraper.ts'
 import type { Settings } from './settings.ts'
 import { SortedArray, isUlid } from './utils.ts'
+import { createClient } from '@libsql/client'
 
 const zDateTime = z
   .string()
@@ -58,35 +50,14 @@ export type Database = ReturnType<typeof Database>
 
 export async function Database({ settings, ee }: DatabaseProps) {
   const { dataPath } = settings
-  const store = await oramaDocumentsStore.createDocumentsStore()
-  const documentIndex = await orama({
-    schema: {
-      id: 'string',
-      title: 'string',
-      description: 'string',
-      keywords: 'string[]',
-      content: 'string',
-      url: 'string'
-    } as const,
-    components: {
-      // HACK(yuki): We're gutting Orama's default document store to be an
-      //             expensive Orama Internal ID -> Canonical ID mapper.
-      //
-      //             Also this breaks Orama's types which is always fun.
-      //
-      //             :-)
-      documentsStore: {
-        ...store,
-        store(ctx, id, { id: docId }) {
-          return store.store(ctx, id, { id: docId })
-        }
-      },
-      tokenizer: {
-        stemming: true,
-        stopWords
-      }
-    }
+
+  const client = createClient({
+    url: ':memory:'
   })
+
+  await client.execute(
+    'CREATE VIRTUAL TABLE fts_documents USING fts5(id UNINDEXED, title, description, content, url, keywords)'
+  )
 
   const watcher = chokidar.watch(dataPath, { depth: 0, ignoreInitial: true })
   const cachedDocumentIds = SortedArray<string>((a, b) =>
@@ -101,13 +72,16 @@ export async function Database({ settings, ee }: DatabaseProps) {
   async function insert(id: string, document: Meta) {
     cachedDocumentIds.insert(id)
     watcher.add(join(dataPath, id, 'meta.json'))
-    await oramaInsert(documentIndex, {
-      id,
-      url: document.url,
-      title: document.title ?? undefined,
-      description: document.description ?? undefined,
-      content: document.content ?? undefined,
-      keywords: document.keywords ?? []
+    await client.execute({
+      sql: 'INSERT INTO fts_documents (id, url, title, description, content, keywords) VALUES (?, ?, ?, ?, ?, ?)',
+      args: [
+        id,
+        document.url,
+        document.title ?? null,
+        document.description ?? null,
+        document.content ?? null,
+        document.keywords?.join(' ') ?? null
+      ]
     })
   }
 
@@ -115,18 +89,24 @@ export async function Database({ settings, ee }: DatabaseProps) {
     cachedDocumentIds.remove(id)
     cache.delete(id)
     watcher.unwatch(join(dataPath, id, 'meta.json'))
-    await oramaRemove(documentIndex, id)
+    await client.execute({
+      sql: 'DELETE FROM fts_documents WHERE id = ?',
+      args: [id]
+    })
   }
 
   async function update(id: string, document: Meta) {
     cache.delete(id)
-    await oramaUpdate(documentIndex, id, {
-      id,
-      url: document.url,
-      title: document.title ?? undefined,
-      description: document.description ?? undefined,
-      content: document.content ?? undefined,
-      keywords: document.keywords ?? []
+    await client.execute({
+      sql: 'UPDATE fts_documents SET url = ?, title = ?, description = ?, content = ?, keywords = ? WHERE id = ?',
+      args: [
+        document.url,
+        document.title ?? null,
+        document.description ?? null,
+        document.content ?? null,
+        document.keywords?.join(' ') ?? null,
+        id
+      ]
     })
   }
 
@@ -169,13 +149,12 @@ export async function Database({ settings, ee }: DatabaseProps) {
     page = 1,
     pageSize = 25
   ): Promise<Result> {
-    const res = await oramaSearch(documentIndex, {
-      term,
-      limit: pageSize,
-      offset: (page - 1) * pageSize
+    const res = await client.execute({
+      sql: 'SELECT id FROM fts_documents WHERE fts_documents MATCH ? ORDER BY rank LIMIT ? OFFSET ?',
+      args: [term, pageSize, (page - 1) * pageSize]
     })
 
-    const ids = res.hits.map((i) => i.document.id)
+    const ids = res.rows.map((i) => i.id) as string[]
     const nextPage = ids.length === pageSize ? pageSize + 1 : undefined
     const items = await Promise.all(ids.map(get))
 
@@ -214,16 +193,19 @@ export async function Database({ settings, ee }: DatabaseProps) {
 
   await mkdir(dataPath, { recursive: true })
 
-  await Promise.allSettled(
-    (await readdir(dataPath, { withFileTypes: true }))
-      .filter((i) => i.isDirectory())
-      .filter((i) => isUlid(i.name))
-      .map((i) => i.name)
-      .map(async (id) => {
-        const document = await read(id)
-        await insert(id, document)
-      })
-  )
+  const ids = (await readdir(dataPath, { withFileTypes: true }))
+    .filter((i) => i.isDirectory())
+    .filter((i) => isUlid(i.name))
+    .map((i) => i.name)
+
+  for await (const id of ids) {
+    try {
+      const document = await read(id)
+      await insert(id, document)
+    } catch (e) {
+      console.error(e)
+    }
+  }
 
   watcher.on('addDir', async (path) => {
     const id = basename(path)
@@ -235,7 +217,7 @@ export async function Database({ settings, ee }: DatabaseProps) {
     logger.info('Adding document: %s', id)
     const document = await read(id)
 
-    insert(id, document)
+    await insert(id, document)
     ee.emit('document:add', id)
   })
 
